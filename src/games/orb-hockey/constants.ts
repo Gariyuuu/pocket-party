@@ -1,0 +1,12 @@
+export const TABLE_WIDTH = 500;
+export const TABLE_HEIGHT = 760;
+export const PADDLE_RADIUS = 32;
+export const PUCK_RADIUS = 16;
+export const GOAL_WIDTH = 180;
+export const WIN_SCORE = 7;
+export const COUNTDOWN_MS = 3000;
+export const PADDLE_BROADCAST_MS = 50;
+export const PUCK_BROADCAST_MS = 80;
+export const PUCK_MAX_SPEED = 900;
+export const PUCK_FRICTION_PER_SECOND = 0.15;
+export const PADDLE_HIT_IMPULSE = 1.6;
