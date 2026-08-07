@@ -84,3 +84,58 @@ export function buildToneDataUri(steps: readonly ToneStep[]): string {
   }
   return encodeWav(samples);
 }
+
+/**
+ * A single note in a polyphonic mix — unlike `ToneStep` (sequential, one
+ * voice), any number of `NoteEvent`s can overlap in time, each with its own
+ * attack/release envelope. This is what makes real chords/basslines/melody
+ * possible instead of one oscillator playing one note at a time.
+ */
+export interface NoteEvent {
+  frequency: number;
+  startMs: number;
+  durationMs: number;
+  type?: "sine" | "square" | "triangle";
+  /** Peak linear amplitude for this note, 0-1. Keep voices low enough that a full chord doesn't clip when summed — see the composition in `music.ts`. */
+  gain?: number;
+  /** Fade-in length in ms. Longer for pads (avoids a click and sounds like a swell), shorter for plucked notes. */
+  attackMs?: number;
+  /** Fade-out length in ms, measured back from the note's own end. */
+  releaseMs?: number;
+}
+
+function addNote(samples: Float32Array, sampleRate: number, note: NoteEvent): void {
+  const startSample = Math.round((note.startMs / 1000) * sampleRate);
+  const count = Math.round((note.durationMs / 1000) * sampleRate);
+  const attackSamples = Math.max(1, Math.round(((note.attackMs ?? 15) / 1000) * sampleRate));
+  const releaseSamples = Math.max(1, Math.round(((note.releaseMs ?? 60) / 1000) * sampleRate));
+  const gain = note.gain ?? 0.2;
+  const type = note.type ?? "sine";
+  for (let i = 0; i < count; i++) {
+    const sampleIndex = startSample + i;
+    if (sampleIndex < 0 || sampleIndex >= samples.length) continue;
+    const t = i / sampleRate;
+    const phase = 2 * Math.PI * note.frequency * t;
+    let value: number;
+    switch (type) {
+      case "square":
+        value = Math.sign(Math.sin(phase));
+        break;
+      case "triangle":
+        value = (2 / Math.PI) * Math.asin(Math.sin(phase));
+        break;
+      default:
+        value = Math.sin(phase);
+    }
+    const envelope = Math.min(1, i / attackSamples, (count - i) / releaseSamples);
+    samples[sampleIndex] += value * Math.max(0, envelope) * gain;
+  }
+}
+
+/** Builds a polyphonic mix (any number of overlapping `NoteEvent`s) as a playable data URI — used for real chords/basslines, unlike `buildToneDataUri`'s single sequential voice. */
+export function buildMixedToneDataUri(notes: readonly NoteEvent[], totalDurationMs: number): string {
+  const totalSamples = Math.round((totalDurationMs / 1000) * SAMPLE_RATE);
+  const samples = new Float32Array(totalSamples);
+  for (const note of notes) addNote(samples, SAMPLE_RATE, note);
+  return encodeWav(samples);
+}
