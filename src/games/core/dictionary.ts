@@ -3,8 +3,9 @@ let cachedList: string[] | null = null;
 
 /**
  * Lazy-loads the bundled word list (public-domain dictionary, filtered to
- * plain 3-8 letter lowercase entries) as its own chunk — only Word Clash
- * pays for it, and only once per session.
+ * plain 3-8 letter lowercase entries) as its own chunk — shared by Word
+ * Clash and Word Bites (both need real-word validation), fetched at most
+ * once per session regardless of which game (or both) ends up using it.
  */
 async function loadWordList(): Promise<string[]> {
   if (!cachedList) {

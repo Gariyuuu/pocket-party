@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { isFormableFromPool } from "./letter-pool";
-import { isRealWord } from "./dictionary";
+import { isRealWord } from "@/games/core/dictionary";
 import { wordScore } from "./scoring";
 import type { WordClashAction, WordClashState } from "./types";
 import type { RoomPlayer } from "@/lib/multiplayer/types";

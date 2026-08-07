@@ -22,15 +22,24 @@ import { playSfx } from "@/lib/audio/sfx";
 import { vibrate } from "@/lib/audio/use-audio-settings";
 import { useFullscreen } from "@/lib/design/use-fullscreen";
 import { pickWordClashBotWords } from "@/games/word-clash/bot";
-import { getWordList } from "@/games/word-clash/dictionary";
+import { getWordList } from "@/games/core/dictionary";
 import type { WordClashState } from "@/games/word-clash/types";
 import type { QuickDrawState } from "@/games/quick-draw/types";
 import { pickTileRushMove } from "@/games/tile-rush/bot";
 import type { TileRushState } from "@/games/tile-rush/types";
+import { pickWordBitesMove } from "@/games/word-bites/bot";
+import type { WordBitesState } from "@/games/word-bites/types";
+import { randomFleetPlacement } from "@/games/sea-battle/placement";
+import { SHIP_LENGTHS, BOARD_SIZE as SEA_BATTLE_BOARD_SIZE } from "@/games/sea-battle/constants";
+import type { SeaBattleState } from "@/games/sea-battle/types";
+import { pickTriviaAnswer } from "@/games/trivia-blitz/bot";
+import { TRIVIA_QUESTIONS } from "@/games/trivia-blitz/questions";
+import type { TriviaBlitzState } from "@/games/trivia-blitz/types";
 
 const BOT_GUESS_ACCURACY = { easy: 0.5, medium: 0.7, hard: 0.9 } as const;
 const BOT_GUESS_DELAY_MS = { easy: 9000, medium: 6000, hard: 3500 } as const;
 const TILE_RUSH_BOT_INTERVAL_MS = { easy: 1800, medium: 1200, hard: 700 } as const;
+const WORD_BITES_BOT_INTERVAL_MS = { easy: 7000, medium: 4500, hard: 2500 } as const;
 
 const YOU_ID = "solo-you";
 const BOT_ID = "solo-bot";
@@ -148,6 +157,68 @@ export function SoloGameShell({ gameId, difficulty }: { gameId: GameId; difficul
     return () => clearInterval(interval);
   }, [gameId, difficulty, engine]);
 
+  const wordBitesSetRef = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (gameId !== "word-bites") return;
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      if (!wordBitesSetRef.current) {
+        const list = await getWordList();
+        if (cancelled) return;
+        wordBitesSetRef.current = new Set(list.map((w) => w.toUpperCase()));
+      }
+      const wordSet = wordBitesSetRef.current;
+      setState((current: WordBitesState) => {
+        if (!current || current.status !== "round-active") return current;
+        const move = pickWordBitesMove(current.rack, wordSet, difficulty);
+        if (!move) return current;
+        const result = engine!.applyAction(current, { type: "submit-word", tileIds: move.tileIds }, BOT_ID);
+        return result.ok ? result.nextState : current;
+      });
+    }, WORD_BITES_BOT_INTERVAL_MS[difficulty]);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [gameId, difficulty, engine]);
+
+  // Sea Battle's placement phase isn't turn-based (both sides place
+  // independently), so it doesn't fit the generic post-action bot dispatch
+  // below — the bot just places its fleet once, immediately, the moment a
+  // match starts.
+  useEffect(() => {
+    if (gameId !== "sea-battle" || !state) return;
+    const seaState = state as SeaBattleState;
+    if (seaState.status !== "placing" || seaState.fleets[BOT_ID] != null) return;
+    const placements = randomFleetPlacement(SHIP_LENGTHS, SEA_BATTLE_BOARD_SIZE);
+    const result = engine!.applyAction(seaState, { type: "place-ships", placements }, BOT_ID);
+    if (result.ok) setState(result.nextState);
+  }, [gameId, state, engine]);
+
+  // Trivia Blitz has no turn order — everyone answers the same question
+  // independently — so it doesn't fit the generic post-action bot dispatch
+  // either, same reasoning as Word Clash. Guard purely on `answers[BOT_ID]`
+  // (not an extra "already scheduled this round" ref) — the human's own
+  // answer also changes `state`, which re-fires this effect and cancels the
+  // in-flight timeout via cleanup; a round-scoped ref would then wrongly
+  // block ever rescheduling it. Cancel-and-reschedule on every state change
+  // is fine here since the guard itself is idempotent.
+  useEffect(() => {
+    if (gameId !== "trivia-blitz" || !state) return;
+    const triviaState = state as TriviaBlitzState;
+    if (triviaState.status !== "round-active" || triviaState.answers[BOT_ID]) return;
+
+    const timeout = setTimeout(() => {
+      const questionIndex = triviaState.questionOrder[triviaState.round - 1];
+      const question = TRIVIA_QUESTIONS[questionIndex];
+      const answerIndex = pickTriviaAnswer(question.correctIndex, question.options.length, difficulty);
+      const result = engine!.applyAction(triviaState, { type: "answer", answerIndex }, BOT_ID);
+      if (result.ok) setState(result.nextState);
+    }, 1200 + Math.random() * 1800);
+
+    return () => clearTimeout(timeout);
+  }, [gameId, state, difficulty, engine]);
+
   if (!engine || !meta || !state) {
     return <p className="p-8 text-center text-muted-foreground">This game isn&apos;t available yet.</p>;
   }
@@ -158,6 +229,38 @@ export function SoloGameShell({ gameId, difficulty }: { gameId: GameId; difficul
       ? (state as QuickDrawState).promptWord[0]?.toUpperCase()
       : undefined;
 
+  function playActionSfx(actionType: string) {
+    playSfx(actionType === "place" || actionType === "drop" ? "place" : "select");
+  }
+
+  // Keeps letting the bot act — not just once — as long as it's still the
+  // bot's own turn. A single action doesn't always end a turn: Darts/Cornhole
+  // need 3-4 actions per turn before passing, and Mancala/Dots and
+  // Boxes/Yahtzee can grant an extra action on the same turn (landing in your
+  // own store, completing a box, or simply choosing to reroll). Calling
+  // `getBotAction` only once per human action (the previous behavior) left
+  // the bot permanently stuck after its first action in exactly those games.
+  function runBotTurn(fromState: unknown) {
+    setTimeout(() => {
+      if (!engine!.getBotAction) return;
+      const botAction = engine!.getBotAction(fromState, BOT_ID, difficulty);
+      const botResult = engine!.applyAction(fromState, botAction, BOT_ID);
+      if (!botResult.ok) return;
+      playActionSfx(botAction.type);
+      setState(botResult.nextState);
+
+      const outcome = engine!.checkOutcome(botResult.nextState);
+      if (outcome.status !== "active") {
+        const won = outcome.status === "win" && outcome.winnerPlayerId === YOU_ID;
+        playSfx(won ? "win" : "draw");
+        vibrate(won ? [0, 60, 40, 60] : [0, 120]);
+        return;
+      }
+      const nextTurn = (botResult.nextState as { currentTurnPlayerId?: string }).currentTurnPlayerId;
+      if (nextTurn === BOT_ID) runBotTurn(botResult.nextState);
+    }, 500);
+  }
+
   function handleAction(action: Record<string, unknown> & { type: string }) {
     const result = engine!.applyAction(state, action, YOU_ID);
     if (!result.ok) {
@@ -166,20 +269,13 @@ export function SoloGameShell({ gameId, difficulty }: { gameId: GameId; difficul
       toast.error(result.message);
       return;
     }
-    playSfx(action.type === "place" || action.type === "drop" ? "place" : "select");
+    playActionSfx(action.type);
     setState(result.nextState);
 
     const nextOutcome = engine!.checkOutcome(result.nextState);
     const currentTurn = (result.nextState as { currentTurnPlayerId?: string }).currentTurnPlayerId;
     if (nextOutcome.status === "active" && currentTurn === BOT_ID && engine!.getBotAction) {
-      setTimeout(() => {
-        const botAction = engine!.getBotAction!(result.nextState, BOT_ID, difficulty);
-        const botResult = engine!.applyAction(result.nextState, botAction, BOT_ID);
-        if (botResult.ok) {
-          playSfx(botAction.type === "place" || botAction.type === "drop" ? "place" : "select");
-          setState(botResult.nextState);
-        }
-      }, 500);
+      runBotTurn(result.nextState);
     } else if (nextOutcome.status !== "active") {
       const won = nextOutcome.status === "win" && nextOutcome.winnerPlayerId === YOU_ID;
       playSfx(won ? "win" : "draw");

@@ -10,7 +10,8 @@ import type { UseRealtimeRoomResult } from "@/lib/realtime/use-realtime-room";
 export type RealtimeBroadcast = Pick<UseRealtimeRoomResult, "sendBroadcast" | "onBroadcast">;
 
 // Each board is its own chunk — a room playing Grid Three never downloads
-// Fourfall's or Word Clash's code (or Word Clash's bundled word list).
+// Fourfall's or Word Clash's code (or the big bundled dictionary Word Clash
+// and Word Bites share, see games/core/dictionary.ts).
 const GridThreeBoard = dynamic(() => import("@/games/grid-three/board").then((m) => m.GridThreeBoard), {
   loading: () => <Skeleton className="h-72 w-72" />,
 });
@@ -40,6 +41,42 @@ const QuickDrawBoard = dynamic(() => import("@/games/quick-draw/board").then((m)
 });
 const TileRushBoard = dynamic(() => import("@/games/tile-rush/board").then((m) => m.TileRushBoard), {
   loading: () => <Skeleton className="h-72 w-full max-w-sm" />,
+});
+const MiniGolfBoard = dynamic(() => import("@/games/mini-golf/board").then((m) => m.MiniGolfBoard), {
+  loading: () => <Skeleton className="h-56 w-full max-w-2xl" />,
+});
+const WordBitesPanel = dynamic(() => import("@/games/word-bites/panel").then((m) => m.WordBitesPanel), {
+  loading: () => <Skeleton className="h-72 w-full max-w-sm" />,
+});
+const SeaBattleBoard = dynamic(() => import("@/games/sea-battle/board").then((m) => m.SeaBattleBoard), {
+  loading: () => <Skeleton className="h-72 w-full max-w-2xl" />,
+});
+const CheckersBoard = dynamic(() => import("@/games/checkers/board").then((m) => m.CheckersBoard), {
+  loading: () => <Skeleton className="h-96 w-96" />,
+});
+const ChessBoard = dynamic(() => import("@/games/chess/board").then((m) => m.ChessBoard), {
+  loading: () => <Skeleton className="h-96 w-96" />,
+});
+const DartsBoard = dynamic(() => import("@/games/darts/board").then((m) => m.DartsBoard), {
+  loading: () => <Skeleton className="h-56 w-full max-w-2xl" />,
+});
+const CornholeBoard = dynamic(() => import("@/games/cornhole/board").then((m) => m.CornholeBoard), {
+  loading: () => <Skeleton className="h-56 w-full max-w-2xl" />,
+});
+const ReversiBoard = dynamic(() => import("@/games/reversi/board").then((m) => m.ReversiBoard), {
+  loading: () => <Skeleton className="h-96 w-96" />,
+});
+const DotsAndBoxesBoard = dynamic(() => import("@/games/dots-and-boxes/board").then((m) => m.DotsAndBoxesBoard), {
+  loading: () => <Skeleton className="h-96 w-96" />,
+});
+const YahtzeeBoard = dynamic(() => import("@/games/yahtzee/board").then((m) => m.YahtzeeBoard), {
+  loading: () => <Skeleton className="h-96 w-full max-w-md" />,
+});
+const MancalaBoard = dynamic(() => import("@/games/mancala/board").then((m) => m.MancalaBoard), {
+  loading: () => <Skeleton className="h-56 w-full max-w-lg" />,
+});
+const TriviaBlitzPanel = dynamic(() => import("@/games/trivia-blitz/panel").then((m) => m.TriviaBlitzPanel), {
+  loading: () => <Skeleton className="h-72 w-full max-w-md" />,
 });
 
 interface GameSurfaceProps {
@@ -174,6 +211,126 @@ export function GameSurface({
     case "tile-rush":
       return (
         <TileRushBoard
+          state={state}
+          myPlayerId={myPlayerId}
+          players={players}
+          onAction={onAction}
+          disabled={disabled}
+        />
+      );
+    case "mini-golf":
+      return (
+        <MiniGolfBoard
+          state={state}
+          myPlayerId={myPlayerId}
+          players={players}
+          onAction={onAction}
+          disabled={disabled}
+        />
+      );
+    case "word-bites":
+      return (
+        <WordBitesPanel
+          state={state}
+          myPlayerId={myPlayerId}
+          players={players}
+          onAction={onAction}
+          disabled={disabled}
+        />
+      );
+    case "sea-battle":
+      return (
+        <SeaBattleBoard
+          state={state}
+          myPlayerId={myPlayerId}
+          players={players}
+          onAction={onAction}
+          disabled={disabled}
+        />
+      );
+    case "checkers":
+      return (
+        <CheckersBoard
+          state={state}
+          myPlayerId={myPlayerId}
+          players={players}
+          onAction={onAction}
+          disabled={disabled}
+        />
+      );
+    case "chess":
+      return (
+        <ChessBoard
+          state={state}
+          myPlayerId={myPlayerId}
+          players={players}
+          onAction={onAction}
+          disabled={disabled}
+        />
+      );
+    case "darts":
+      return (
+        <DartsBoard
+          state={state}
+          myPlayerId={myPlayerId}
+          players={players}
+          onAction={onAction}
+          disabled={disabled}
+        />
+      );
+    case "cornhole":
+      return (
+        <CornholeBoard
+          state={state}
+          myPlayerId={myPlayerId}
+          players={players}
+          onAction={onAction}
+          disabled={disabled}
+        />
+      );
+    case "reversi":
+      return (
+        <ReversiBoard
+          state={state}
+          myPlayerId={myPlayerId}
+          players={players}
+          onAction={onAction}
+          disabled={disabled}
+        />
+      );
+    case "dots-and-boxes":
+      return (
+        <DotsAndBoxesBoard
+          state={state}
+          myPlayerId={myPlayerId}
+          players={players}
+          onAction={onAction}
+          disabled={disabled}
+        />
+      );
+    case "yahtzee":
+      return (
+        <YahtzeeBoard
+          state={state}
+          myPlayerId={myPlayerId}
+          players={players}
+          onAction={onAction}
+          disabled={disabled}
+        />
+      );
+    case "mancala":
+      return (
+        <MancalaBoard
+          state={state}
+          myPlayerId={myPlayerId}
+          players={players}
+          onAction={onAction}
+          disabled={disabled}
+        />
+      );
+    case "trivia-blitz":
+      return (
+        <TriviaBlitzPanel
           state={state}
           myPlayerId={myPlayerId}
           players={players}

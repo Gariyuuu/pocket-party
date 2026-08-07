@@ -7,4 +7,7 @@ export const PHYSICS_HEAVY_GAMES = new Set<GameId>([
   "tank-tactics",
   "pocket-shots",
   "orb-hockey",
+  "mini-golf",
+  "darts",
+  "cornhole",
 ]);

@@ -1,0 +1,16 @@
+export const CANVAS_WIDTH = 700;
+export const CANVAS_HEIGHT = 340;
+export const GROUND_Y = 320;
+export const BOARD_SURFACE_Y = 270;
+export const BOARD_START_X = 420;
+export const BOARD_END_X = 620;
+export const HOLE_START_X = 555;
+export const HOLE_END_X = 595;
+export const SHOOTER_X = 60;
+export const SHOOTER_Y = GROUND_Y;
+export const GRAVITY = 850;
+export const MAX_SHOT_SPEED = 780;
+export const DT = 1 / 120;
+export const MAX_STEPS = 400;
+export const BAGS_PER_TURN = 4;
+export const TOTAL_ROUNDS = 4;

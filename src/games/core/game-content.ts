@@ -130,4 +130,143 @@ export const GAME_CONTENT: Partial<Record<GameId, GameContent>> = {
       "Watch for the power-up icons — clearing one of those tiles triggers its effect immediately.",
     ],
   },
+  "mini-golf": {
+    rules: [
+      "Three holes, played in order. Everyone putts their own ball, turns rotate player by player.",
+      "Once your ball reaches the hole, you're done for that hole — everyone else keeps putting.",
+      "Taking too many strokes on one hole forces you in automatically, so nobody gets stuck forever.",
+      "Once everyone has holed out, the next hole begins. Lowest total strokes across all three holes wins.",
+    ],
+    tutorial: [
+      "Drag back from your ball and release to putt — the further you drag, the more power.",
+      "Obstacles bounce your ball rather than stopping it — use the angle to curve around them.",
+    ],
+  },
+  "word-bites": {
+    rules: [
+      "Everyone shares one rack of letter \"bites\" — chunks of 1-3 letters, in a fixed left-to-right order.",
+      "Combine a connected, in-order run of bites into a real word to claim those tiles and score points.",
+      "Longer combos score disproportionately more.",
+      "The match ends once the whole rack is claimed, or the timer runs out — highest score wins.",
+    ],
+    tutorial: [
+      "Tap bites left to right to build a selection — you can only extend to a bite touching your current selection.",
+      "Tap Submit once your selection spells a real word. A wrong guess doesn't cost you anything, so experiment.",
+    ],
+  },
+  "sea-battle": {
+    rules: [
+      "Place your fleet of 5 ships in secret — a Carrier, Battleship, Cruiser, Submarine, and Destroyer.",
+      "Once both fleets are placed, take turns firing at one cell on your opponent's board.",
+      "A hit is reported immediately; sinking a whole ship is announced too.",
+      "Sink every ship in the enemy fleet before they sink yours to win.",
+    ],
+    tutorial: [
+      "Tap a cell to place the highlighted ship there — Rotate changes its orientation, Randomize places your whole fleet instantly.",
+      "Once battling starts, tap a cell on \"Enemy waters\" to fire. You never see the opponent's unhit ships, only your own hits and misses.",
+    ],
+  },
+  checkers: {
+    rules: [
+      "Pieces move one square diagonally, forward only, toward the opponent's side.",
+      "Jump over an adjacent enemy piece into an empty square beyond it to capture — if any of your pieces can capture, you must make a capturing move.",
+      "Landing consecutive jumps in one turn is allowed but not required — you can stop early if you'd rather.",
+      "Reach the far row to crown a piece into a king, which can move and capture diagonally in any direction.",
+      "Capture every enemy piece, or leave them with no legal move, to win.",
+    ],
+    tutorial: [
+      "Tap one of your pieces to select it, then tap a highlighted square to move or jump there.",
+      "If you land a jump and another jump is immediately available with the same piece, tap again to continue the chain, or tap \"Stop jumping here\" to end your turn early.",
+    ],
+  },
+  chess: {
+    rules: [
+      "Standard chess rules: every piece moves and captures the normal way, including castling, en passant, and pawn promotion.",
+      "You can't make a move that leaves your own king in check.",
+      "Checkmate — no legal move gets your king out of check — ends the match immediately.",
+      "A player with no legal move but not in check is stalemated, and the match is a draw.",
+    ],
+    tutorial: [
+      "Tap one of your pieces to see every square it can legally move to, then tap a highlighted square to move there.",
+      "Moving a pawn to the far row prompts you to choose what it promotes to.",
+    ],
+  },
+  darts: {
+    rules: [
+      "Each turn is 3 throws at the board, then it's the next player's turn.",
+      "Closer to the bullseye scores more — the rings pay out 50, 25, 15, 10, and 5 points from the center out.",
+      "Missing the board entirely scores zero for that throw.",
+      "Five rounds each — highest total score across all your throws wins.",
+    ],
+    tutorial: [
+      "Drag the angle and power sliders, then tap Throw.",
+      "The dashed line always shows exactly where your current aim will land — adjust until it's centered on a scoring ring.",
+    ],
+  },
+  cornhole: {
+    rules: [
+      "Each turn is 4 bag tosses at the board, then it's the next player's turn.",
+      "A bag that lands on the board scores 1 point; a bag that goes in the hole scores 3.",
+      "A bag that misses the board entirely scores nothing.",
+      "Four rounds each — highest total score across all your tosses wins.",
+    ],
+    tutorial: [
+      "Drag the angle and power sliders, then tap Toss.",
+      "The board is elevated and slanted, with the hole cut near the far end — overshoot slightly to drop a bag in rather than just landing short on the boards.",
+    ],
+  },
+  reversi: {
+    rules: [
+      "Place a disc so it sandwiches one or more of your opponent's discs (in a straight line) between your new disc and another one of your own — every sandwiched disc flips to your color.",
+      "You can only place where at least one flip would happen. If you have no legal move, your turn is skipped automatically.",
+      "The match ends when the board fills up or neither player has a legal move.",
+      "Whoever has the most discs on the board when it ends wins.",
+    ],
+    tutorial: [
+      "Tap a highlighted square to place a disc there — every legal move is marked.",
+      "Corners are the most valuable squares (they can never be flipped back) — the squares diagonally next to a corner are risky, since taking one often hands the opponent that corner.",
+    ],
+  },
+  "dots-and-boxes": {
+    rules: [
+      "Tap a line to claim it. Whoever draws the fourth side of a box claims that box.",
+      "Claiming a box earns you another turn immediately — chain several together and you can claim a run of boxes in one turn.",
+      "The match ends once every line is claimed.",
+      "Whoever owns the most boxes wins.",
+    ],
+    tutorial: [
+      "Tap any unclaimed line between two dots to draw it.",
+      "Careful — drawing the third side of a box (without completing it) hands your opponent a free box next turn.",
+    ],
+  },
+  yahtzee: {
+    rules: [
+      "Each turn: roll all 5 dice, then choose which to hold and reroll the rest, up to 3 rolls total.",
+      "After rolling, lock your dice into one of 13 scoring categories — each category can only be used once per player.",
+      "Score 63+ across the six upper-section categories (Ones through Sixes) for a 35-point bonus.",
+      "Once everyone has filled all 13 categories, highest total wins.",
+    ],
+    tutorial: [
+      "Tap a die to hold it (it won't reroll), tap Roll to reroll everything else.",
+      "Tap a number in the scorecard to lock your current dice into that category — you must roll at least once before you can score.",
+    ],
+  },
+  mancala: {
+    rules: [
+      "Pick one of your own pits — every seed in it gets sown one-by-one into each following pit (including your own store, but skipping your opponent's store).",
+      "Land your last seed in your own store and you go again.",
+      "Land your last seed in an empty pit on your own side and you capture it plus everything in the pit directly opposite.",
+      "Once either side's pits are all empty, the round ends — whoever has more seeds in their store wins.",
+    ],
+    tutorial: ["Tap one of your own pits (the bottom row) to sow it — empty pits and your opponent's pits aren't tappable."],
+  },
+  "trivia-blitz": {
+    rules: [
+      "Everyone sees the same question and answers independently — there's no turn order.",
+      "A correct answer scores 10 points; a wrong answer scores 0. Speed doesn't matter, only being right.",
+      "The next question appears once everyone has answered.",
+      "After 8 questions, highest total score wins.",
+    ],
+    tutorial: ["Tap one of the four options to lock in your answer — once you answer, you can't change it for that question."],
+  },
 };

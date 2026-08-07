@@ -2,7 +2,7 @@ import type { GameId } from "@/games/core/registry";
 import { getGameMeta } from "@/games/core/registry";
 import { getGameEngine } from "@/games/core/engines";
 import { randomSeed } from "@/games/core/rng";
-import { isRealWord } from "@/games/word-clash/dictionary";
+import { isRealWord } from "@/games/core/dictionary";
 import { nicknameSchema, withCollisionSuffix } from "@/lib/validation/nickname";
 import type { EnginePlayer } from "@/games/core/game-engine";
 import type { AvatarColorId } from "@/lib/design/tokens";
@@ -396,6 +396,25 @@ async function applySpecialCasing(
       };
       const everyoneGuessed = Object.keys(state.guesses).length >= state.players.length - 1;
       if (now < state.roundEndsAt && !everyoneGuessed) {
+        return { ok: false, error: "rate_limited", message: "The round isn't over yet." };
+      }
+      action = { type: "advance-round", now };
+    }
+  }
+
+  if (gameId === "word-bites") {
+    if (actionType === "submit-word") {
+      const rack = (gameState as { rack: { id: string; letters: string }[] }).rack;
+      const tileIds = Array.isArray(payload.tileIds) ? (payload.tileIds as unknown[]) : [];
+      const indices = tileIds.map((id) => rack.findIndex((t) => t.id === id)).sort((a, b) => a - b);
+      const word = indices.every((i) => i !== -1) ? indices.map((i) => rack[i].letters).join("") : "";
+      if (word.length < 3 || !(await isRealWord(word))) {
+        return { ok: false, error: "invalid_move", message: "Not a real word." };
+      }
+    }
+    if (actionType === "advance-round") {
+      const state = gameState as { roundEndsAt: number };
+      if (now < state.roundEndsAt) {
         return { ok: false, error: "rate_limited", message: "The round isn't over yet." };
       }
       action = { type: "advance-round", now };

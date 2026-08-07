@@ -20,7 +20,19 @@ export type GameId =
   | "orb-hockey"
   | "pocket-shots"
   | "quick-draw"
-  | "tile-rush";
+  | "tile-rush"
+  | "mini-golf"
+  | "word-bites"
+  | "sea-battle"
+  | "checkers"
+  | "chess"
+  | "darts"
+  | "cornhole"
+  | "reversi"
+  | "dots-and-boxes"
+  | "yahtzee"
+  | "mancala"
+  | "trivia-blitz";
 
 export type GameCategory = "classic" | "physics" | "reflex" | "puzzle";
 
@@ -165,6 +177,150 @@ export const GAME_REGISTRY: Record<GameId, GameMeta> = {
     status: "available",
     realtime: false,
     accent: "lime",
+  },
+  "mini-golf": {
+    id: "mini-golf",
+    name: "Mini Golf",
+    tagline: "Putt, bounce, hole out.",
+    description: "Three obstacle courses, lowest total strokes wins — drag back and release to putt.",
+    category: "physics",
+    minPlayers: 2,
+    maxPlayers: 4,
+    status: "available",
+    realtime: false,
+    accent: "lime",
+  },
+  "word-bites": {
+    id: "word-bites",
+    name: "Word Bites",
+    tagline: "Combine the bites, claim the word.",
+    description: "Everyone shares one rack of letter chunks — connect adjacent bites into real words before anyone else grabs them.",
+    category: "puzzle",
+    minPlayers: 2,
+    maxPlayers: 4,
+    status: "available",
+    realtime: false,
+    accent: "amber",
+  },
+  "sea-battle": {
+    id: "sea-battle",
+    name: "Sea Battle",
+    tagline: "Fire, hit, sink.",
+    description: "Place your fleet in secret, then trade shots blind — sink every enemy ship first.",
+    category: "classic",
+    minPlayers: 2,
+    maxPlayers: 2,
+    status: "available",
+    realtime: false,
+    accent: "cyan",
+  },
+  checkers: {
+    id: "checkers",
+    name: "Checkers",
+    tagline: "Jump, crown, conquer.",
+    description: "Classic diagonal jumps and mandatory captures — clear the board or trap every last piece.",
+    category: "classic",
+    minPlayers: 2,
+    maxPlayers: 2,
+    status: "available",
+    realtime: false,
+    accent: "violet",
+  },
+  chess: {
+    id: "chess",
+    name: "Chess",
+    tagline: "Every move, checked.",
+    description: "The full game — castling, en passant, promotion, checkmate — right in the browser.",
+    category: "classic",
+    minPlayers: 2,
+    maxPlayers: 2,
+    status: "available",
+    realtime: false,
+    accent: "amber",
+  },
+  darts: {
+    id: "darts",
+    name: "Darts",
+    tagline: "Aim small, score big.",
+    description: "Three throws a round at a real dartboard target — highest score after five rounds wins.",
+    category: "physics",
+    minPlayers: 2,
+    maxPlayers: 4,
+    status: "available",
+    realtime: false,
+    accent: "pink",
+  },
+  cornhole: {
+    id: "cornhole",
+    name: "Cornhole",
+    tagline: "On the board, in the hole.",
+    description: "Toss bags at a tilted board — land on it for a point, sink the hole for three.",
+    category: "physics",
+    minPlayers: 2,
+    maxPlayers: 4,
+    status: "available",
+    realtime: false,
+    accent: "lime",
+  },
+  reversi: {
+    id: "reversi",
+    name: "Reversi",
+    tagline: "Flip the board, own the board.",
+    description: "Sandwich your opponent's discs to flip them to your color — whoever owns the most when the board fills wins.",
+    category: "classic",
+    minPlayers: 2,
+    maxPlayers: 2,
+    status: "available",
+    realtime: false,
+    accent: "lime",
+  },
+  "dots-and-boxes": {
+    id: "dots-and-boxes",
+    name: "Dots and Boxes",
+    tagline: "Draw a line, claim a box.",
+    description: "Claim the fourth side of a box to score it and go again — the classic pencil-and-paper chain game.",
+    category: "classic",
+    minPlayers: 2,
+    maxPlayers: 2,
+    status: "available",
+    realtime: false,
+    accent: "pink",
+  },
+  yahtzee: {
+    id: "yahtzee",
+    name: "Yahtzee",
+    tagline: "Roll it, hold it, score it.",
+    description: "Three rolls a turn, thirteen categories to fill — chase a Yahtzee or just bank a safe Chance.",
+    category: "classic",
+    minPlayers: 2,
+    maxPlayers: 4,
+    status: "available",
+    realtime: false,
+    accent: "cyan",
+  },
+  mancala: {
+    id: "mancala",
+    name: "Mancala",
+    tagline: "Sow seeds, fill your store.",
+    description: "Scoop a pit, sow around the board, and land in your own store for a bonus turn — classic Kalah rules.",
+    category: "classic",
+    minPlayers: 2,
+    maxPlayers: 2,
+    status: "available",
+    realtime: false,
+    accent: "amber",
+  },
+  "trivia-blitz": {
+    id: "trivia-blitz",
+    name: "Trivia Blitz",
+    tagline: "Know it? Prove it.",
+    description: "Eight rounds of multiple-choice trivia — everyone answers at once, fastest fingers don't matter, just being right.",
+    category: "puzzle",
+    minPlayers: 2,
+    maxPlayers: 4,
+    status: "available",
+    realtime: false,
+    accent: "violet",
   },
 };
 

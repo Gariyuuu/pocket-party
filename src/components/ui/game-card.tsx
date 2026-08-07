@@ -15,6 +15,18 @@ import {
   Target,
   PenTool,
   Sparkles,
+  Flag,
+  Puzzle,
+  Anchor,
+  Crown,
+  Circle,
+  Locate,
+  Package2,
+  Disc,
+  BoxSelect,
+  Dices,
+  Rows3,
+  CircleHelp,
 } from "lucide-react";
 
 const GAME_ICONS: Record<GameMeta["id"], React.ComponentType<{ className?: string }>> = {
@@ -28,6 +40,18 @@ const GAME_ICONS: Record<GameMeta["id"], React.ComponentType<{ className?: strin
   "pocket-shots": Target,
   "quick-draw": PenTool,
   "tile-rush": Sparkles,
+  "mini-golf": Flag,
+  "word-bites": Puzzle,
+  "sea-battle": Anchor,
+  checkers: Circle,
+  chess: Crown,
+  darts: Locate,
+  cornhole: Package2,
+  reversi: Disc,
+  "dots-and-boxes": BoxSelect,
+  yahtzee: Dices,
+  mancala: Rows3,
+  "trivia-blitz": CircleHelp,
 };
 
 const ACCENT_GRADIENT: Record<GameMeta["accent"], string> = {
