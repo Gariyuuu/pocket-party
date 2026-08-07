@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { resolveCssVars } from "@/games/core/canvas-color";
 import {
   centerPuck,
   clampPaddleToHalf,
@@ -94,6 +95,16 @@ export function OrbHockeyBoard({
     const canvas = canvasRef.current;
     if (!canvas) return;
     let raf: number;
+    // Resolved once per effect setup (not per frame — getComputedStyle on
+    // every tick of a 60fps loop would be wasteful) rather than per frame;
+    // canvas can't read var(--x) directly, see games/core/canvas-color.ts.
+    const colors = resolveCssVars(canvas, [
+      "--color-party-cyan",
+      "--color-party-amber",
+      "--color-player-1",
+      "--color-player-2",
+      "--color-party-violet",
+    ]);
 
     function frame(now: number) {
       const dt = lastFrameTime.current ? Math.min(0.05, (now - lastFrameTime.current) / 1000) : 1 / 60;
@@ -135,7 +146,7 @@ export function OrbHockeyBoard({
         broadcast.sendBroadcast("paddle", myPaddle.current);
       }
 
-      render(canvas!, state, myPaddle.current, opponentPaddle.current, puck.current, mySide, players, myPlayerId);
+      render(canvas!, state, myPaddle.current, opponentPaddle.current, puck.current, mySide, players, myPlayerId, colors);
       raf = requestAnimationFrame(frame);
     }
 
@@ -244,22 +255,29 @@ function render(
   mySide: "bottom" | "top",
   players: RoomPlayer[],
   myPlayerId: string,
+  colors: string[],
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
+  const [cyan, amber, player1, player2, violet] = colors;
+  const TAU = Math.PI * 2;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "color-mix(in oklch, var(--color-party-cyan) 10%, transparent)";
+  ctx.fillStyle = `color-mix(in oklch, ${cyan} 14%, transparent)`;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.strokeStyle = "color-mix(in oklch, currentColor 20%, transparent)";
+  ctx.strokeStyle = `color-mix(in oklch, ${cyan} 40%, transparent)`;
+  ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(0, canvas.height / 2);
   ctx.lineTo(canvas.width, canvas.height / 2);
   ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(canvas.width / 2, canvas.height / 2, GOAL_WIDTH / 2, 0, TAU);
+  ctx.stroke();
 
   const goalLeft = canvas.width / 2 - GOAL_WIDTH / 2;
-  ctx.strokeStyle = "var(--color-party-amber)";
+  ctx.strokeStyle = amber;
   ctx.lineWidth = 4;
   ctx.beginPath();
   ctx.moveTo(goalLeft, 2);
@@ -271,15 +289,20 @@ function render(
   const bottomPos = mySide === "bottom" ? myPaddle : opponentPaddle;
   const topPos = mySide === "top" ? myPaddle : opponentPaddle;
 
-  ctx.fillStyle = "var(--color-player-1)";
   ctx.beginPath();
-  ctx.arc(bottomPos.x, bottomPos.y, PADDLE_RADIUS, 0, Math.PI * 2);
+  ctx.arc(bottomPos.x, bottomPos.y, PADDLE_RADIUS, 0, TAU);
+  ctx.fillStyle = player1;
   ctx.fill();
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 2;
+  ctx.stroke();
 
-  ctx.fillStyle = "var(--color-player-2)";
   ctx.beginPath();
-  ctx.arc(topPos.x, topPos.y, PADDLE_RADIUS, 0, Math.PI * 2);
+  ctx.arc(topPos.x, topPos.y, PADDLE_RADIUS, 0, TAU);
+  ctx.fillStyle = player2;
   ctx.fill();
+  ctx.strokeStyle = "#ffffff";
+  ctx.stroke();
 
   // Colorblind-safe: a letter, not just a color, marks each paddle.
   ctx.fillStyle = "white";
@@ -290,10 +313,13 @@ function render(
   ctx.fillText("B", topPos.x, topPos.y);
   ctx.textBaseline = "alphabetic";
 
-  ctx.fillStyle = "var(--color-party-violet)";
   ctx.beginPath();
-  ctx.arc(puckState.x, puckState.y, PUCK_RADIUS, 0, Math.PI * 2);
+  ctx.arc(puckState.x, puckState.y, PUCK_RADIUS, 0, TAU);
+  ctx.fillStyle = violet;
   ctx.fill();
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
 
   if (state.winnerPlayerId) {
     ctx.fillStyle = "color-mix(in oklch, currentColor 60%, transparent)";

@@ -2,18 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { resolveCssVars } from "@/games/core/canvas-color";
 import { CUE_BALL_ID, COMET_BALL_ID, POCKETS, TABLE_HEIGHT, TABLE_WIDTH } from "./constants";
 import type { PocketShotsAction, PocketShotsState } from "./types";
 import type { RoomPlayer } from "@/lib/multiplayer/types";
 
 const DRAG_SCALE = 160;
 const MIN_DRAG = 12;
-const BALL_COLORS = {
-  cue: "#f8fafc",
-  comet: "#1c1917",
-  orb: "var(--color-party-cyan)",
-  ring: "var(--color-party-amber)",
-} as const;
+// cue/comet are fixed literal colors; orb/ring are theme-reactive party
+// accents, resolved to a real value inside the draw effect (canvas can't
+// read `var(--x)` on its own — see games/core/canvas-color.ts).
+const FIXED_BALL_COLORS = { cue: "#f8fafc", comet: "#1c1917" } as const;
 
 export function PocketShotsBoard({
   state,
@@ -59,16 +58,26 @@ export function PocketShotsBoard({
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
     const scale = canvas.width / TABLE_WIDTH;
+    const [violet, cyan, amber, pink] = resolveCssVars(canvas, [
+      "--color-party-violet",
+      "--color-party-cyan",
+      "--color-party-amber",
+      "--color-party-pink",
+    ]);
+    const ballColors = { ...FIXED_BALL_COLORS, orb: cyan, ring: amber };
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "color-mix(in oklch, var(--color-party-violet) 12%, transparent)";
+    ctx.fillStyle = `color-mix(in oklch, ${violet} 16%, transparent)`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     for (const pocket of POCKETS) {
-      ctx.fillStyle = "color-mix(in oklch, currentColor 70%, transparent)";
       ctx.beginPath();
       ctx.arc(pocket.x * scale, pocket.y * scale, 20 * scale, 0, Math.PI * 2);
+      ctx.fillStyle = "color-mix(in oklch, currentColor 70%, transparent)";
       ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.stroke();
     }
 
     const renderBalls = animatedStep !== null && state.lastShot ? state.lastShot.paths : null;
@@ -83,10 +92,13 @@ export function PocketShotsBoard({
       if (ball.pocketed && !renderBalls) continue;
 
       const radius = 11 * scale;
-      ctx.fillStyle = BALL_COLORS[ball.group];
       ctx.beginPath();
       ctx.arc(pos.x * scale, pos.y * scale, radius, 0, Math.PI * 2);
+      ctx.fillStyle = ballColors[ball.group];
       ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
 
       // Colorblind-safe: Rings get a literal white band, Orbs stay solid —
       // the groups differ in pattern, not just hue.
@@ -111,7 +123,7 @@ export function PocketShotsBoard({
     if (drag && isMyTurn && !disabled) {
       const dx = drag.x - cueBall.x;
       const dy = drag.y - cueBall.y;
-      ctx.strokeStyle = "var(--color-party-pink)";
+      ctx.strokeStyle = pink;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(cueBall.x * scale, cueBall.y * scale);

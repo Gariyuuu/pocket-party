@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { velocityFromAimPower, simulateProjectile } from "@/games/core/physics";
+import { resolveCssVars } from "@/games/core/canvas-color";
 import { GRAVITY, MAX_SHOT_SPEED, SHOOTER_X, SHOOTER_Y, TABLE_GROUND_Y, TABLE_WIDTH } from "./constants";
 import type { BounceCupAction, BounceCupState } from "./types";
 import type { RoomPlayer } from "@/lib/multiplayer/types";
@@ -16,7 +17,7 @@ interface BounceCupBoardProps {
   disabled?: boolean;
 }
 
-const CANVAS_HEIGHT = 220;
+const CANVAS_HEIGHT = 350; // TABLE_GROUND_Y (320) + cup radius + margin — was 220, which clipped the ground/cups off-canvas entirely
 
 export function BounceCupBoard({ state, myPlayerId, players, onAction, disabled }: BounceCupBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -48,11 +49,23 @@ export function BounceCupBoard({ state, myPlayerId, players, onAction, disabled 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const scale = canvas.width / TABLE_WIDTH;
+    const TAU = Math.PI * 2;
+
+    const [violet, cyan, amber, pink] = resolveCssVars(canvas, [
+      "--color-party-violet",
+      "--color-party-cyan",
+      "--color-party-amber",
+      "--color-party-pink",
+    ]);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Table.
-    ctx.strokeStyle = "color-mix(in oklch, currentColor 25%, transparent)";
+    // Table felt — a real surface color, not a blank card background.
+    ctx.fillStyle = `color-mix(in oklch, ${violet} 16%, transparent)`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Table edge.
+    ctx.strokeStyle = `color-mix(in oklch, ${violet} 45%, transparent)`;
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, TABLE_GROUND_Y * scale);
@@ -60,19 +73,32 @@ export function BounceCupBoard({ state, myPlayerId, players, onAction, disabled 
     ctx.stroke();
 
     // Shooter.
-    ctx.fillStyle = "var(--color-party-cyan)";
     ctx.beginPath();
-    ctx.arc(SHOOTER_X * scale, SHOOTER_Y * scale, 8, 0, Math.PI * 2);
+    ctx.arc(SHOOTER_X * scale, SHOOTER_Y * scale, 9, 0, TAU);
+    ctx.fillStyle = cyan;
     ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
-    // Cups.
+    // Cups — a bright rim on every cup (cleared or not) so the target
+    // formation is always legible, with a filled top for cups still in play.
     for (const cup of state.cups) {
-      ctx.fillStyle = cup.cleared
-        ? "color-mix(in oklch, currentColor 10%, transparent)"
-        : "var(--color-party-amber)";
+      const cx = cup.x * scale;
+      const cy = TABLE_GROUND_Y * scale;
       ctx.beginPath();
-      ctx.arc(cup.x * scale, TABLE_GROUND_Y * scale, 12, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 13, 0, TAU);
+      ctx.fillStyle = cup.cleared ? "color-mix(in oklch, currentColor 8%, transparent)" : amber;
       ctx.fill();
+      ctx.strokeStyle = cup.cleared ? "color-mix(in oklch, currentColor 30%, transparent)" : "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      if (!cup.cleared) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, 6, 0, TAU);
+        ctx.fillStyle = "color-mix(in oklch, black 25%, transparent)";
+        ctx.fill();
+      }
     }
 
     // Aim preview (no wind — the player doesn't know the roll in advance either).
@@ -86,7 +112,8 @@ export function BounceCupBoard({ state, myPlayerId, players, onAction, disabled 
         maxSteps: 600,
         groundHeightAt: () => TABLE_GROUND_Y,
       });
-      ctx.strokeStyle = "color-mix(in oklch, var(--color-party-violet) 50%, transparent)";
+      ctx.strokeStyle = `color-mix(in oklch, ${violet} 60%, transparent)`;
+      ctx.lineWidth = 2;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
       preview.path.forEach((p, i) => {
@@ -102,7 +129,7 @@ export function BounceCupBoard({ state, myPlayerId, players, onAction, disabled 
     // Animated last shot.
     if (state.lastShot && animatedStep !== null) {
       const visible = state.lastShot.path.slice(0, animatedStep);
-      ctx.strokeStyle = "var(--color-party-pink)";
+      ctx.strokeStyle = pink;
       ctx.lineWidth = 3;
       ctx.beginPath();
       visible.forEach((p, i) => {
@@ -115,10 +142,13 @@ export function BounceCupBoard({ state, myPlayerId, players, onAction, disabled 
 
       const ballPoint = visible[visible.length - 1];
       if (ballPoint) {
-        ctx.fillStyle = "var(--color-party-pink)";
         ctx.beginPath();
-        ctx.arc(ballPoint.x * scale, ballPoint.y * scale, 6, 0, Math.PI * 2);
+        ctx.arc(ballPoint.x * scale, ballPoint.y * scale, 6, 0, TAU);
+        ctx.fillStyle = pink;
         ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
       }
     }
   }, [state.cups, state.lastShot, animatedStep, angle, power, isMyTurn, disabled]);

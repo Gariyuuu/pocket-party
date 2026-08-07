@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { velocityFromAimPower, simulateProjectile } from "@/games/core/physics";
+import { resolveCssVars } from "@/games/core/canvas-color";
 import { COURT_WIDTH, GRAVITY, GROUND_Y, HOOP_RADIUS, HOOP_Y, MAX_SHOT_SPEED, SHOOTER_X, SHOOTER_Y } from "./constants";
 import type { MiniHoopsAction, MiniHoopsState } from "./types";
 import type { RoomPlayer } from "@/lib/multiplayer/types";
 
-const CANVAS_HEIGHT = 220;
+const CANVAS_HEIGHT = 380; // GROUND_Y (360) + margin — was 220, which clipped the ground/hoop off-canvas entirely
 
 export function MiniHoopsBoard({
   state,
@@ -53,25 +54,57 @@ export function MiniHoopsBoard({
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
     const scale = canvas.width / COURT_WIDTH;
+    const TAU = Math.PI * 2;
+
+    const [cyan, amber, violet, lime, pink] = resolveCssVars(canvas, [
+      "--color-party-cyan",
+      "--color-party-amber",
+      "--color-party-violet",
+      "--color-party-lime",
+      "--color-party-pink",
+    ]);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.strokeStyle = "color-mix(in oklch, currentColor 25%, transparent)";
+    // Court — a warm gradient-ish tint instead of a blank card background.
+    ctx.fillStyle = `color-mix(in oklch, ${amber} 14%, transparent)`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = `color-mix(in oklch, ${amber} 45%, transparent)`;
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, GROUND_Y * scale);
     ctx.lineTo(canvas.width, GROUND_Y * scale);
     ctx.stroke();
 
-    ctx.fillStyle = "var(--color-party-cyan)";
     ctx.beginPath();
-    ctx.arc(SHOOTER_X * scale, SHOOTER_Y * scale, 8, 0, Math.PI * 2);
+    ctx.arc(SHOOTER_X * scale, SHOOTER_Y * scale, 9, 0, TAU);
+    ctx.fillStyle = cyan;
     ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
+    // Hoop — a backboard-style post plus a bright rim, so it reads as a
+    // basketball hoop rather than an abstract ring.
     const currentHoopX = state.lastShot ? state.lastShot.hoopX : hoopX;
-    ctx.strokeStyle = "var(--color-party-amber)";
+    const hx = currentHoopX * scale;
+    const hy = HOOP_Y * scale;
+    ctx.strokeStyle = "color-mix(in oklch, currentColor 40%, transparent)";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.ellipse(currentHoopX * scale, HOOP_Y * scale, HOOP_RADIUS * scale, 6, 0, 0, Math.PI * 2);
+    ctx.moveTo(hx, hy - 30);
+    ctx.lineTo(hx, GROUND_Y * scale);
+    ctx.stroke();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(hx, hy, HOOP_RADIUS * scale + 2, 7, 0, 0, TAU);
+    ctx.stroke();
+    ctx.strokeStyle = amber;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(hx, hy, HOOP_RADIUS * scale, 6, 0, 0, TAU);
     ctx.stroke();
 
     if (isMyTurn && !disabled) {
@@ -84,7 +117,8 @@ export function MiniHoopsBoard({
         maxSteps: 500,
         groundHeightAt: () => GROUND_Y,
       });
-      ctx.strokeStyle = "color-mix(in oklch, var(--color-party-violet) 50%, transparent)";
+      ctx.strokeStyle = `color-mix(in oklch, ${violet} 60%, transparent)`;
+      ctx.lineWidth = 2;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
       preview.path.forEach((p, i) => {
@@ -99,7 +133,8 @@ export function MiniHoopsBoard({
 
     if (state.lastShot && animatedStep !== null) {
       const visible = state.lastShot.path.slice(0, animatedStep);
-      ctx.strokeStyle = state.lastShot.made ? "var(--color-party-lime)" : "var(--color-party-pink)";
+      const shotColor = state.lastShot.made ? lime : pink;
+      ctx.strokeStyle = shotColor;
       ctx.lineWidth = 3;
       ctx.beginPath();
       visible.forEach((p, i) => {
@@ -111,10 +146,13 @@ export function MiniHoopsBoard({
       ctx.stroke();
       const ball = visible[visible.length - 1];
       if (ball) {
-        ctx.fillStyle = ctx.strokeStyle;
         ctx.beginPath();
-        ctx.arc(ball.x * scale, ball.y * scale, 6, 0, Math.PI * 2);
+        ctx.arc(ball.x * scale, ball.y * scale, 6, 0, TAU);
+        ctx.fillStyle = shotColor;
         ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
       }
     }
   }, [state.lastShot, state.shotIndex, animatedStep, angle, power, isMyTurn, disabled, hoopX]);
