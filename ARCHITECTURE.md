@@ -20,7 +20,7 @@ flowchart TB
         TokenAPI["GET /api/ably-token\nmints a scoped Ably token"]
         ProfileAPI["PATCH /api/profile"]
         PublicRoomsAPI["GET /api/public-rooms"]
-        CronAPI["GET /api/cron/cleanup\n(Vercel Cron, hourly)"]
+        CronAPI["GET /api/cron/cleanup\n(Vercel Cron, daily)"]
     end
 
     subgraph Ably["Ably (hosted pub/sub)"]
@@ -65,7 +65,7 @@ flowchart TB
 - **Three Next.js Route Handler groups, each doing a different job:**
   1. **Room/match actions** — `GET /api/rooms/[code]` (the initial-state fetch a client makes on mount) and `POST /api/rooms/[code]/action` (every room/match action: join, ready, select-game, in-game moves, rematch, leave, etc. — a discriminated union matching `RoomActionRequest`). Both load/save a room's state from/to Neon's `live_rooms` table and, for the POST route, publish the result to Ably afterward.
   2. **Identity/profile** — `GET /api/ably-token` (mints a short-lived, room-scoped Ably token from the caller's resolved identity), `PATCH /api/profile` (the only write path for display name/avatar color).
-  3. **Discovery/maintenance** — `GET /api/public-rooms` (unauthenticated read of the public-rooms discovery index), `GET /api/cron/cleanup` (Vercel Cron, hourly — reclaims idle rooms from `live_rooms`).
+  3. **Discovery/maintenance** — `GET /api/public-rooms` (unauthenticated read of the public-rooms discovery index), `GET /api/cron/cleanup` (Vercel Cron, daily — reclaims idle rooms from `live_rooms`).
 - **All actual game logic lives in two places:**
   1. `src/lib/realtime/room-state.ts` — the pure, I/O-free room/match reducer: join/ready/select-game/set-visibility/set-modifiers/start/action/rematch/return-to-lobby/leave/disconnect. Directly unit-testable (`tests/unit/realtime-room-state.test.ts`, 16 tests) since it never touches storage, the network, or the clock (wall-clock time is passed in as an explicit `now` parameter).
   2. `src/games/<game>/engine.ts` — pure per-game rules: given a state and an action, returns a new state or a rejection reason. Called from `room-state.ts`'s `applyGameAction`, unchanged by any backend choice this app has made — **this layer has never depended on Supabase, PartyKit, or Ably.**
@@ -108,7 +108,7 @@ Unchanged by any backend choice this app has made. Every game engine that needs 
 
 ## Background/scheduled jobs
 
-- **`GET /api/cron/cleanup`**, scheduled hourly via `vercel.json`'s cron entry, reclaims rooms in `live_rooms` idle past a 4-hour threshold (matching the same number a Cloudflare Durable Object's `onAlarm` used to enforce, before this rework — Ably has no per-room timer primitive to replace it with, so this reverted to a real scheduled sweep, the same shape the original pre-migration design used).
+- **`GET /api/cron/cleanup`**, scheduled daily via `vercel.json`'s cron entry (originally hourly, matching the 4-hour threshold below more tightly — downgraded to daily when the first real production deploy hit a Vercel Hobby-plan limit rejecting sub-daily cron schedules, see `DEPLOYMENT.md`), reclaims rooms in `live_rooms` idle past a 4-hour threshold (matching the same number a Cloudflare Durable Object's `onAlarm` used to enforce, before this rework — Ably has no per-room timer primitive to replace it with, so this reverted to a real scheduled sweep, the same shape the original pre-migration design used).
 - No other scheduled jobs exist. No queue/worker system exists.
 
 ## Caching

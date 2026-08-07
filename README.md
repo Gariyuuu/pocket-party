@@ -4,18 +4,23 @@ A browser-based multiplayer mini-game platform: create a room, share a
 six-character code, and play fast rounds with friends — no download, no
 account required.
 
-**Status:** Feature-complete prototype. All ten games — Grid Three, Fourfall,
-Word Clash, Bounce Cup, Mini Hoops, Tank Tactics, Pocket Shots, Orb Hockey,
-Quick Draw, and Tile Rush — are fully playable: real-time multiplayer, bot
+**Status:** Feature-complete prototype, **deployed and live** at
+https://pocket-party-eta.vercel.app. All twenty-two games — Grid Three,
+Fourfall, Word Clash, Bounce Cup, Mini Hoops, Tank Tactics, Pocket Shots,
+Orb Hockey, Quick Draw, Tile Rush, Mini Golf, Word Bites, Sea Battle,
+Checkers, Chess, Darts, Cornhole, Reversi, Dots and Boxes, Yahtzee,
+Mancala, and Trivia Blitz — are fully playable: real-time multiplayer, bot
 opponents for solo play, rules/tutorial modals, sound, and rematch flow.
 Accounts, achievements, match history, per-game leaderboards, and recent
-opponents are wired end to end. **None of this has ever been run against a
-live backend** — see "Local development" below for what you need to set up
-first, and `PROJECT_STATE.md` for the exact current state.
+opponents are wired end to end. Guest identity, room join/leave, and Ably
+token minting are confirmed working against the live deployment — **no
+human has clicked through it in a browser yet**, and a real two-person live
+match hasn't been observed. See `PROJECT_STATE.md` for the exact current
+state.
 
 ## Backend
 
-Three services, none yet connected to a real project:
+Three services, all live:
 
 - **Clerk** — real accounts. Guests never touch Clerk at all; they get a
   hand-rolled `guest_id` cookie instead (`src/lib/identity/guest-cookie.ts`),
@@ -45,7 +50,7 @@ Framer Motion · Zustand · Zod · Clerk (accounts) · Neon + Drizzle (database)
 Ably (realtime) · Howler.js (procedurally generated tones, see "Audio"
 below) · Vitest · Playwright
 
-## The 10 games
+## The 22 games
 
 - **Grid Three** — tic-tac-toe-style, classic 3x3 or a 5x5 connect-four
   variant. Bots: easy (mostly random), medium (wins/blocks immediate
@@ -57,8 +62,9 @@ below) · Vitest · Playwright
 - **Word Clash** — 3 timed rounds against a shared letter pool (Scrabble-ish
   tile distribution, seeded so every client draws the same pool). Words are
   checked against a bundled ~76k-word public-domain dictionary
-  (`games/word-clash/word-list.json`). A word claimed by more than one player
-  in the same round scores zero for everyone who found it.
+  (`games/core/word-list.json`, shared with Word Bites). A word claimed by
+  more than one player in the same round scores zero for everyone who found
+  it.
 - **Bounce Cup** — aim/power sliders, single-bounce table physics, a 6-cup
   rack that never refills. Bot: numerical grid search over angle/power
   against the actual physics simulator, then difficulty-scaled noise.
@@ -86,23 +92,83 @@ below) · Vitest · Playwright
   every player starts from the same board and plays an independent copy for
   two minutes. Five power-ups: row clear, column clear, shuffle, a stacking
   score multiplier, and freeze.
+- **Mini Golf** — three fixed obstacle courses, played in order. Each player
+  putts their own ball; turns rotate, skipping anyone already holed out on
+  the current hole. A per-hole stroke cap forces a hole-out so nobody can
+  get stuck forever. Lowest total strokes across all three holes wins. Bot:
+  grid search over angle/power against the actual rolling-friction
+  simulator, obstacle bounces included.
+- **Word Bites** — everyone shares one rack of letter "bites" (1-3 letter
+  chunks) in a fixed left-to-right order, built at match start from a small
+  curated word list and shuffled by source word (so each original word's
+  bites stay connected, though a run spanning two words' boundary can spell
+  something else entirely). Combine a connected, in-order run into a real
+  word — checked against the same bundled dictionary Word Clash uses — to
+  claim those tiles and score points. Longer combos score disproportionately
+  more. Ends when the rack is fully claimed or the timer runs out.
+- **Sea Battle** — classic Battleship on an 8x8 grid. Each player places a
+  5-ship fleet privately (a non-turn-based phase — both players place
+  independently, battling starts the instant both fleets are set), then
+  takes turns firing on the opponent's grid; you only ever see your own
+  hits/misses, never the opponent's unhit ships. Bot: hunts the neighbors of
+  any unsunk hit, otherwise prefers a checkerboard firing pattern on hard.
+- **Checkers** — 8x8, mandatory capture enforced (if a jump is available,
+  only jump moves are legal), multi-jump chains with an optional stop
+  partway through, kings crown on reaching the far row. Bot: prioritizes
+  forced captures, then positional heuristics by difficulty.
+- **Chess** — full rules: check/checkmate/stalemate detection, castling
+  (both sides, with attacked-square checks), en passant, and pawn
+  promotion. Board flips per viewer so your own pieces always render at the
+  bottom. Bot: material evaluation plus a 2-ply minimax on hard difficulty.
+- **Darts** — angle/power sliders, a real trajectory arc against a
+  standard ring layout (bullseye through outer ring), 3 darts per turn.
+  Bot: grid search over angle/power against the actual physics simulator.
+- **Cornhole** — angle/power sliders, an elevated board-with-a-hole target,
+  4 bags per turn. Bot: same grid-search approach as Darts.
+- **Reversi** — classic disc-flipping on an 8x8 board. Sandwich the
+  opponent's discs between two of yours (in a straight line) to flip them.
+  No legal move? Your turn auto-skips — no explicit pass needed. Most
+  discs when the board fills wins. Bot: standard positional-weight
+  heuristic (corners valuable, the squares next to a corner risky).
+- **Dots and Boxes** — claim the fourth side of a box to score it and go
+  again — chain several together in one turn. Most boxes when every line
+  is drawn wins. Bot: takes free boxes, stays "safe" otherwise, and on hard
+  difficulty picks whichever forced sacrifice costs the fewest boxes by
+  simulating the resulting chain reaction.
+- **Yahtzee** — 3 rolls a turn (hold whichever dice you like between
+  rolls), then lock your dice into one of 13 scoring categories. A 63+
+  upper-section subtotal earns a 35-point bonus. Highest total after
+  everyone fills all 13 categories wins.
+- **Mancala** — classic Kalah rules on a 14-cell board. Sow a pit's seeds
+  one-by-one around the board (skipping the opponent's store); land your
+  last seed in your own store for another turn, or in an empty pit on your
+  own side to capture it plus everything opposite. Most seeds in your
+  store once one side empties out wins.
+- **Trivia Blitz** — 8 rounds of multiple-choice general-knowledge
+  questions. Everyone answers the same question independently — no turn
+  order, no timer — and the next question appears once everyone has
+  answered. Correct answers score 10 points; highest total wins.
 
 Every turn-based game supports solo play against a bot from the landing
 page's "Play Solo" button — that mode runs the same engine fully client-side
 with no network calls.
 
-All three physics games (Bounce Cup, Mini Hoops, Tank Tactics) and Pocket
-Shots share the deterministic-replay pattern: a shot is one action, fully
-simulated the instant it's submitted with a fixed timestep and a per-shot
-seed-derived value — never live-synced ball positions. That's what makes the
-same shot replay identically for every spectator and for server-side
-validation.
+All three physics games (Bounce Cup, Mini Hoops, Tank Tactics), Pocket
+Shots, Mini Golf, Darts, and Cornhole share the deterministic-replay
+pattern: a shot is one action, fully simulated the instant it's submitted
+with a fixed timestep and a per-shot seed-derived value — never live-synced
+ball positions. That's what makes the same shot replay identically for
+every spectator and for server-side validation.
 
 ### Audio
 
 There are no external sound files. `lib/audio/tone.ts` synthesizes short WAV
 tone bursts (sine/square/triangle) at runtime and hands them to Howler as
-data URIs — every effect is procedurally original.
+data URIs — every effect is procedurally original. The ambient background
+loop (`lib/audio/music.ts`) goes further: a polyphonic mixer
+(`buildMixedToneDataUri`) layers a bassline, a sustained chord pad, and a
+plucked melody into an 8-bar chord progression, rather than one oscillator
+playing one note at a time.
 
 ## Platform features
 
@@ -212,7 +278,7 @@ src/
   app/            # routes: landing, room/[code], game/[gameId], lobby, leaderboard, profile, api/ (rooms/[code], rooms/[code]/action, ably-token, profile, public-rooms, cron/cleanup)
   components/      # ui/, landing/, room/, lobby/, scoreboard/, profile/
   games/
-    core/          # registry, GameEngine contract, seeded RNG, action envelope
+    core/          # registry, GameEngine contract, seeded RNG, action envelope, shared dictionary (Word Clash + Word Bites)
     <game-id>/     # one folder per game
   lib/
     db/            # Neon client, Drizzle schema, seed script
@@ -222,5 +288,5 @@ src/
     validation/    # zod schemas (nicknames, etc.)
     design/        # design tokens (colors, spacing, type scale)
 drizzle/            # generated SQL migrations for src/lib/db/schema.ts
-vercel.json         # Vercel Cron config — hourly idle-room cleanup
+vercel.json         # Vercel Cron config — daily idle-room cleanup
 ```

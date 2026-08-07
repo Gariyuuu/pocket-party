@@ -83,7 +83,7 @@ All internal API routes are Next.js Route Handlers under `src/app/api/`. No rout
 ### `GET /api/cron/cleanup`
 
 - **Source:** `src/app/api/cron/cleanup/route.ts`
-- **Purpose:** scheduled reclamation of idle rooms. Triggered by Vercel Cron per `vercel.json` (hourly). There's no per-room timer primitive to replace this with the way a Durable Object's `onAlarm` was — see `DECISIONS.md` D-018.
+- **Purpose:** scheduled reclamation of idle rooms. Triggered by Vercel Cron per `vercel.json` (daily — originally hourly, downgraded by a Vercel Hobby-plan limit, see `DEPLOYMENT.md`). There's no per-room timer primitive to replace this with the way a Durable Object's `onAlarm` was — see `DECISIONS.md` D-018.
 - **Auth:** optional `CRON_SECRET` bearer check — if the env var is set, requires `Authorization: Bearer <CRON_SECRET>` (which Vercel attaches automatically to its own cron requests); if unset, the route is open to anyone who hits the URL (acceptable for local dev, a documented gap in production — see `SECURITY.md`).
 - **Response (200):** `{ "deletedRooms": number }`.
 - **Errors (401):** wrong/missing bearer token when `CRON_SECRET` is set. **(500):** `internal_error`.

@@ -48,14 +48,14 @@ Status classification legend: **Verified complete** (full flow read end-to-end: 
 
 ### Multiplayer match engine (server-authoritative actions)
 
-- **Purpose:** the shared runtime every one of the 10 games' online play goes through — turn/move validation, sequence-based anti-replay, match finalization.
+- **Purpose:** the shared runtime every one of the 22 games' online play goes through — turn/move validation, sequence-based anti-replay, match finalization.
 - **Files:** `src/lib/realtime/room-state.ts` (the pure reducer, unit-tested — `tests/unit/realtime-room-state.test.ts`, 16 tests), `src/app/api/rooms/[code]/action/route.ts` (the I/O shell — Neon load/save, Ably publish, rate limiting), `src/lib/realtime/finalize-match.ts`.
 - **Status: Verified complete (static)** / **Unable to verify (live)** — this is the single most important piece of code in the app to live-test first, since every game depends on it.
 
 ### Solo play vs. bot
 
-- **Purpose:** let one person play any of the 10 games alone against a bot, no room/multiplayer needed. **Entirely unaffected by either backend migration** — solo play never touched Supabase, PartyKit, or Ably; it's pure client-side engine logic.
-- **Files:** `src/components/game-shell/solo-game-shell.tsx`, `src/games/*/bot.ts` (6 games), plus hand-wired bot logic inside `solo-game-shell.tsx` or `board.tsx` for the other 4.
+- **Purpose:** let one person play any of the 22 games alone against a bot, no room/multiplayer needed. **Entirely unaffected by either backend migration** — solo play never touched Supabase, PartyKit, or Ably; it's pure client-side engine logic.
+- **Files:** `src/components/game-shell/solo-game-shell.tsx`, `src/games/*/bot.ts` (16 games), plus hand-wired bot logic inside `solo-game-shell.tsx` or `board.tsx` for the other 6.
 - **Bot architecture split:**
   | Game | Bot mechanism |
   |---|---|
@@ -65,10 +65,22 @@ Status classification legend: **Verified complete** (full flow read end-to-end: 
   | Mini Hoops | `engine.getBotAction()` |
   | Tank Tactics | `engine.getBotAction()` |
   | Pocket Shots | `engine.getBotAction()` |
+  | Mini Golf | `engine.getBotAction()` |
+  | Checkers | `engine.getBotAction()` |
+  | Chess | `engine.getBotAction()` |
+  | Darts | `engine.getBotAction()` |
+  | Cornhole | `engine.getBotAction()` |
   | Word Clash | hand-wired in `solo-game-shell.tsx` |
   | Quick Draw | hand-wired in `solo-game-shell.tsx` |
   | Tile Rush | hand-wired in `solo-game-shell.tsx` |
+  | Word Bites | hand-wired in `solo-game-shell.tsx` (has its own `bot.ts` with the word-finding logic, but isn't reached through `getBotAction` since there's no turn to hand off — any player can submit anytime) |
   | Orb Hockey | hand-wired directly inside `src/games/orb-hockey/board.tsx`'s animation loop |
+  | Sea Battle | mostly `engine.getBotAction()` (firing), plus a dedicated `useEffect` in `solo-game-shell.tsx` to make the bot place its fleet immediately on mount, since fleet placement isn't a turn-based action |
+  | Reversi | `engine.getBotAction()` |
+  | Dots and Boxes | `engine.getBotAction()` |
+  | Yahtzee | `engine.getBotAction()`, called repeatedly across one turn (roll → hold decisions → reroll → score) by the generic bot-turn loop described above |
+  | Mancala | `engine.getBotAction()` |
+  | Trivia Blitz | hand-wired in `solo-game-shell.tsx` (no turn to hand off — every player answers independently) |
 - **Status: Verified complete (static)**, confirmed passing via unit tests for every engine's bot-move logic where `getBotAction` exists.
 
 ### Achievements
@@ -114,14 +126,17 @@ Status classification legend: **Verified complete** (full flow read end-to-end: 
 ### Audio (procedurally synthesized)
 
 - **Purpose:** sound effects and ambient music, entirely generated at runtime — no shipped audio files. **Unaffected by the backend migration.**
-- **Files:** `src/lib/audio/tone.ts`, `sfx.ts`, `music.ts`, `use-audio-settings.ts`.
-- **Status: Verified complete (static).** Actual audio quality/correctness was not listened to.
+- **Files:** `src/lib/audio/tone.ts` (single-voice tone-burst synth for SFX, plus `buildMixedToneDataUri`/`NoteEvent` — a polyphonic mixer with per-note ADSR envelopes, added for the music rework below), `sfx.ts`, `music.ts` (the ambient loop composition), `use-audio-settings.ts`.
+- **Music rework:** the original ambient loop was a single repeating 4-note sine arpeggio (the same 4 notes forever, no bassline, no harmony) — replaced with an 8-bar vi-IV-I-V chord progression (Am-F-C-G, a common warm/chill progression) built from 3 overlapping voices: a bassline (a laid-back half-note pulse, not a held drone), a sustained triad pad (slow attack/release for a swell rather than a click), and a plucked arpeggio melody that reverses direction on the loop's second pass so it doesn't feel like a literal repeat. `tests/unit/music.test.ts` decodes the actual generated WAV and asserts it's non-silent, non-clipping, and fades to near-zero at both loop edges (so the loop point doesn't click).
+- **Status: Verified complete (static)** and the new composition's generated audio was verified programmatically (WAV decoding, peak/RMS/edge-silence checks) — still not listened to by a human, which static analysis can't substitute for.
 
 ---
 
-## The 10 games
+## The 22 games
 
-Every game shares the same architecture (`types.ts` + `engine.ts` + `board.tsx`, plus supporting pure-logic files) and the same test coverage pattern (a Vitest file per engine in `tests/unit/`, all passing). **The games themselves — every engine, board, and bot — are entirely unaffected by either backend migration.** What changed is only how a board talks to the server: `RoomPlayer`/room-roster types now come from `src/lib/realtime/protocol.ts` instead of Supabase row shapes, and Orb Hockey/Quick Draw's live sync goes over a generic Ably `"broadcast"` event instead of Supabase Realtime Broadcast (previously a PartyKit WebSocket passthrough, in between).
+Every game shares the same architecture (`types.ts` + `engine.ts` + `board.tsx`/`panel.tsx`, plus supporting pure-logic files) and the same test coverage pattern (a Vitest file per engine in `tests/unit/`, all passing). **The games themselves — every engine, board, and bot — are entirely unaffected by either backend migration.** What changed is only how a board talks to the server: `RoomPlayer`/room-roster types now come from `src/lib/realtime/protocol.ts` instead of Supabase row shapes, and Orb Hockey/Quick Draw's live sync goes over a generic Ably `"broadcast"` event instead of Supabase Realtime Broadcast (previously a PartyKit WebSocket passthrough, in between). Mini Golf and Word Bites (added after the Ably rework, alongside the original 10) were built directly against this already-stable architecture and never touched Supabase/PartyKit at all. Sea Battle, Checkers, Chess, Darts, and Cornhole (bringing the total to 17), and later Reversi, Dots and Boxes, Yahtzee, Mancala, and Trivia Blitz (bringing the total to 22) are likewise built directly against this same stable architecture — none of them needed any change to the `GameEngine` interface itself, `room-state.ts`'s special-casing (none of these 10 have a wall-clock timer), or the multiplayer runtime.
+
+**A real bug was found and fixed while adding this latest batch:** the generic solo-mode bot dispatch in `solo-game-shell.tsx` only ever called `engine.getBotAction` **once** per turn handoff. That's correct for a single-action turn (Chess, Checkers), but Darts and Cornhole need 3-4 actions per turn (multiple throws/tosses), and Mancala/Dots and Boxes/Yahtzee can grant a bonus action on the same turn (landing in your own store, completing a box, choosing to reroll) — in every one of those cases, the bot took its first action and then sat permanently stuck for the rest of that turn, softlocking solo play the moment the bot's turn came up. Confirmed via a real Playwright run against Darts before touching anything (human threw 3 weak/missing darts to pass the turn, then waited — the bot threw exactly once and never threw again). Fixed by replacing the one-shot dispatch with a small recursive `runBotTurn` loop that keeps calling `getBotAction` (with the same UX delay between actions) for as long as it's still the bot's turn — re-verified the same Darts scenario afterward and confirmed all 3 bot throws happen automatically before the turn passes back.
 
 | Game | Category | Players | Realtime? | Bot |
 |---|---|---|---|---|
@@ -135,15 +150,38 @@ Every game shares the same architecture (`types.ts` + `engine.ts` + `board.tsx`,
 | Pocket Shots | physics | 2 | No | `getBotAction` |
 | Quick Draw | reflex | 2-4 | **Yes (Ably broadcast)** | hand-wired |
 | Tile Rush | puzzle | 2-4 | No | hand-wired |
+| Mini Golf | physics | 2-4 | No | `getBotAction` |
+| Word Bites | puzzle | 2-4 | No | hand-wired |
+| Sea Battle | classic | 2 | No | `getBotAction` + a mount-time placement effect |
+| Checkers | classic | 2 | No | `getBotAction` |
+| Chess | classic | 2 | No | `getBotAction` |
+| Darts | physics | 2-4 | No | `getBotAction` |
+| Cornhole | physics | 2-4 | No | `getBotAction` |
+| Reversi | classic | 2 | No | `getBotAction` |
+| Dots and Boxes | classic | 2 | No | `getBotAction` |
+| Yahtzee | classic | 2-4 | No | `getBotAction` |
+| Mancala | classic | 2 | No | `getBotAction` |
+| Trivia Blitz | puzzle | 2-4 | No | hand-wired |
 
-All 10 have `status: "available"` in `games/core/registry.ts`. All 10 have engine unit tests passing (172 total across the suite). All 10 are wired into `game-shell/game-surface.tsx`'s dispatch. **"Unable to verify (live)" applies uniformly to all 10** for the same reason as everywhere else in this document: no one has actually played any of them against a live deployment with two real browsers.
+All 22 have `status: "available"` in `games/core/registry.ts`. All 22 have engine unit tests passing (320 total across the suite). All 22 are wired into `game-shell/game-surface.tsx`'s dispatch. **"Unable to verify (live)" applies uniformly to all 22** in the sense that no real two-person online match has been observed against live Neon/Clerk/Ably infrastructure for any of them — but the 10 newest games (Sea Battle, Checkers, Chess, Darts, Cornhole, Reversi, Dots and Boxes, Yahtzee, Mancala, Trivia Blitz) *have* been visually verified in solo mode via real Playwright screenshots and interaction scripts across two sessions (placement/firing, jump captures, checkmate detection, dart throws, bag tosses, disc flips, box completions, a full multi-roll Yahtzee bot turn, Mancala seed conservation, and a complete 8-round Trivia Blitz match all confirmed rendering and behaving correctly in an actual browser) — a stronger bar than the original 12 had at this same stage.
 
 Game-specific notes worth preserving:
 
-- **Word Clash:** server validates submitted words against a real dictionary (`isRealWord`, async, `src/games/word-clash/dictionary.ts` + `word-list.json`) — not just a length check.
-- **Orb Hockey:** the only game with true low-latency real-time physics (client-predicted paddles, one client is a fixed physics authority for the puck, goals reported through the authoritative path with a same-client check to prevent forged goals). Highest-risk game to live-test, since it's the most architecturally different from the other 9.
+- **Word Clash:** server validates submitted words against a real dictionary (`isRealWord`, async, `src/games/core/dictionary.ts` + `word-list.json` — shared with Word Bites) — not just a length check.
+- **Orb Hockey:** the only game with true low-latency real-time physics (client-predicted paddles, one client is a fixed physics authority for the puck, goals reported through the authoritative path with a same-client check to prevent forged goals). Highest-risk game to live-test, since it's the most architecturally different from the other 11.
 - **Quick Draw:** pen strokes broadcast live; guesses and round-advance are the only actions that go through the authoritative `"action"` message path.
-- **Tank Tactics, Word Clash, Orb Hockey, Quick Draw, Tile Rush:** these 5 are the "wall-clock-gated" games — their engines receive an explicit `now` parameter for turn/round timers, threaded in by `room-state.ts`, never computed inside the engine itself.
+- **Tank Tactics, Word Clash, Orb Hockey, Quick Draw, Tile Rush, Word Bites:** these are the "wall-clock-gated" games — their engines receive an explicit `now` parameter for turn/round timers (Word Bites' `advance-round`), threaded in by `room-state.ts`, never computed inside the engine itself. Mini Golf has no wall-clock element at all — hole advancement is a pure function of every ball being holed out, no timer needed.
+- **Mini Golf:** each player putts their own ball; turns rotate, skipping anyone already holed out on the current hole. A per-hole stroke cap (8) forces a hole-out so one stuck player can't stall the match — see `games/mini-golf/constants.ts`.
+- **Word Bites:** the rack (a shared, shrinking sequence of 1-3 letter "bites") is built at match start from a small curated word list (`games/word-bites/seed-words.ts`), chopped and shuffled by source word, not individual bite — real-word *validation* of whatever a player actually submits still goes through the same full dictionary Word Clash uses, since a submitted run doesn't have to be one of the original source words (any real word spanning bites, even across two source words' boundary, counts).
+- **Sea Battle:** fleet placement is its own non-turn-based phase — both players place independently (`fleets: Record<playerId, Ship[]|null>`, starts `null`), and the engine transitions to `"battling"` the instant both are non-null, rather than waiting for a turn handoff. The bot's fire-targeting hunts around the neighbors of any unsunk hit once one exists, and prefers a checkerboard firing pattern otherwise on hard difficulty.
+- **Checkers:** mandatory capture is enforced (`hasAnyCapture` — if any jump is available for the current player, only jump moves are legal, a simple step is rejected). Multi-jump chains are modeled as a `path: number[]` in the action, but **continuation is deliberately optional** — a player can submit a partial chain and stop early via a "Stop jumping here" button, a documented simplification from real checkers' "must complete the full chain" rule.
+- **Chess:** castling rights are recomputed fresh after every move (`recomputeCastlingRights` — checks whether the king and the relevant rook are still physically on their original starting squares) rather than incrementally tracked, which handles "the rook was captured" for free at the cost of an accepted, vanishingly rare edge case (a piece promoted into landing exactly on an original rook square). Move generation is the standard two-phase approach: pseudo-legal moves ignoring self-check, then filtered by simulating each and checking for exposed check. The bot uses material-eval plus a 2-ply minimax on hard difficulty.
+- **Darts and Cornhole:** share an identical turn/round structure and both reuse `games/core/physics.ts`'s `simulateProjectile`, but model their target differently — Darts treats the board as a vertical target plane (stops the simulation when `position.x` reaches the board, scores by distance from the bullseye), while Cornhole treats it as a horizontal elevated platform with a hole (`groundHeightAt(x)` returns the board surface, the ground-level hole depth inside the hole's x-range, or a very large "never lands" value off-board so a miss just exhausts the simulation's step budget).
+- **Reversi:** no explicit "pass" action exists — if a player has zero legal moves, their turn is auto-skipped by the engine rather than requiring a submitted pass, a deliberate UX simplification with an identical outcome either way. The bot uses the standard positional-weight heuristic (corners valuable, the squares diagonally adjacent to a corner penalized, since taking one often hands the opponent that corner).
+- **Dots and Boxes:** completing a box (claiming its 4th edge) grants an extra action on the same turn — chained box completions in one turn are expected, not a bug. The hard-difficulty bot, when forced to concede a box, simulates the resulting chain reaction (the opponent greedily claiming every box that cascades free) to pick the sacrifice that costs the fewest boxes rather than just avoiding the very next capture.
+- **Yahtzee:** a single turn spans multiple actions (roll → hold/reroll decisions → up to 2 more rolls → score) — this game (along with Mancala's bonus-turn rule and Dots and Boxes' extra-turn rule) is what motivated fixing the bot-dispatch bug described above, since a bot needs several consecutive `getBotAction` calls to complete one turn. Implements the standard upper-section bonus (+35 for a 63+ subtotal) but deliberately not the "multiple Yahtzee" joker-scoring bonus — documented as a simplification in `scoring.ts`, not an oversight.
+- **Mancala:** classic Kalah rules — sowing skips the opponent's store, landing your last seed in your own store grants another turn, and landing it in an empty own pit captures that seed plus everything in the directly-opposite pit (unconditionally, even if the opposite pit happens to be empty too, matching the standard ruleset rather than a house-rule variant). The round ends the instant either side's pits are all empty, sweeping the remainder into that side's own store.
+- **Trivia Blitz:** not turn-based — every player answers the same multiple-choice question independently, and the round advances the instant everyone has, with no wall-clock timer and no `room-state.ts` special-casing needed (a deliberate scope reduction from Word Clash's timer-gated round pattern). The bot is hand-wired in `solo-game-shell.tsx` (like Word Clash), not through `engine.getBotAction`, since there's no turn to hand off.
 
 ---
 

@@ -9,24 +9,24 @@ This file, and the rest of the memory system it points to (`PROJECT_STATE.md`, `
 ## Project identity
 
 - **Name:** Pocket Party
-- **One-sentence description:** A browser-based, no-download, no-account-required multiplayer mini-game platform — create a room, share a 6-character code, play one of ten original mini-games with 2-4 people.
-- **Detailed summary:** Every visitor gets an identity immediately — a hand-rolled `guest_id` cookie for no-signup guest play, or a Clerk session for a real account — resolved to one `profiles` row either way (`get-current-actor.ts`). A host creates a room, picks one of ten games, and everyone plays live over an Ably pub/sub channel (`room:<code>`), with a Next.js Route Handler (`POST /api/rooms/[code]/action`) as the single point where actions are validated and applied to a Neon-persisted room state (`live_rooms`). Ten distinct game engines exist, spanning turn-based board games, physics-based arc-shot games, two genuinely real-time games (Orb Hockey, Quick Draw — high-frequency ephemeral sync over a generic client-to-client Ably broadcast), a drawing/guessing game, and a puzzle-race game. Every game supports solo play against a bot. Optional real accounts (via Clerk) preserve the same guest profile's stats rather than starting fresh, unlocking persistent match history, achievements, and per-game leaderboards (all read from Neon via Drizzle).
+- **One-sentence description:** A browser-based, no-download, no-account-required multiplayer mini-game platform — create a room, share a 6-character code, play one of twenty-two original mini-games with 2-4 people.
+- **Detailed summary:** Every visitor gets an identity immediately — a hand-rolled `guest_id` cookie for no-signup guest play, or a Clerk session for a real account — resolved to one `profiles` row either way (`get-current-actor.ts`). A host creates a room, picks one of twenty-two games, and everyone plays live over an Ably pub/sub channel (`room:<code>`), with a Next.js Route Handler (`POST /api/rooms/[code]/action`) as the single point where actions are validated and applied to a Neon-persisted room state (`live_rooms`). Twenty-two distinct game engines exist, spanning turn-based board games (including full Chess and Checkers implementations, plus Reversi/Mancala/Dots and Boxes/Yahtzee), physics-based arc-shot games (including Darts and Cornhole), two genuinely real-time games (Orb Hockey, Quick Draw — high-frequency ephemeral sync over a generic client-to-client Ably broadcast), a drawing/guessing game, a trivia game, and a puzzle-race game. Every game supports solo play against a bot. Optional real accounts (via Clerk) preserve the same guest profile's stats rather than starting fresh, unlocking persistent match history, achievements, and per-game leaderboards (all read from Neon via Drizzle).
 - **Target audience:** Friends/small groups who want GamePigeon-style casual mini-games in a browser, no app install, no signup required to start playing.
 - **Main user problem solved:** "I want to play a quick game with a friend right now, without either of us installing anything or making an account."
-- **Current development stage:** **Feature-complete prototype / advanced MVP.** All ten games are implemented end-to-end (engine, UI, sync, bots), the full Supabase→Clerk/Neon backend migration (Phases 1-5) and the subsequent PartyKit→Ably realtime rework are both complete, and everything passes automated checks. **It has never been run against a live Neon/Clerk/Ably deployment or clicked through by a human.** See "Production status" below.
-- **Production status:** **Not deployed. Not live-tested.** No git commits exist yet (see `PROJECT_STATE.md`). No Vercel project is linked, no Ably app has ever been created. Every verification so far is `tsc --noEmit` / `eslint` / `vitest run` / `next build` passing — **not** the same as verifying the app works with real users, real network latency, or a real Ably channel under load.
-- **Repository type:** A single Next.js app (no separate Worker anymore — see `DECISIONS.md` D-018). Lives at `~/Projects/pocket-party` on the developer's machine, inside a personal `~/Projects` folder that contains many unrelated projects as sibling directories. Treat `~/Projects/pocket-party/` as the repository root for all commands in this document. **Verified**: there are no git commits anywhere in the parent `~/Projects` tree, so there is no meaningful "repo history" to consult — the code itself and these docs are the only record.
+- **Current development stage:** **Feature-complete prototype / advanced MVP, now deployed.** All twenty-two games are implemented end-to-end (engine, UI, sync, bots), the full Supabase→Clerk/Neon backend migration (Phases 1-5) and the subsequent PartyKit→Ably realtime rework are both complete, everything passes automated checks, and the app is live at a real Vercel URL with real Neon/Clerk/Ably credentials behind it. **No human has clicked through it in a browser yet** — see "Production status" below for exactly what has and hasn't been verified.
+- **Production status:** **Deployed and live at https://pocket-party-eta.vercel.app, serving all 22 games** (the 5 newest — Reversi, Dots and Boxes, Yahtzee, Mancala, Trivia Blitz — were redeployed successfully on the first attempt, no quota block, 2026-08-07). Real Neon database, Clerk application, and Ably app are all wired up and confirmed working via `curl`-level API tests (guest identity, room join/leave including selecting `mini-golf` specifically, Ably token minting all return correct results against the live deployment — see `PROJECT_STATE.md`). **Not yet verified:** a real browser click-through, two independent clients actually seeing each other's live Ably updates, and `npm run test:e2e`. The `vercel deploy --prod` that put this live was still a manual push from the local directory, not a git push — see "Repository type" below for the actual current git state, which changed (a real repo + commits + a GitHub remote now exist) after most of the above happened.
+- **Repository type:** A single Next.js app (no separate Worker anymore — see `DECISIONS.md` D-018). Has its own git repository at `~/Projects/pocket-party` (own `.git/`, not a subdirectory of some outer `~/Projects` repo — `~/Projects` itself is just a plain folder of many unrelated sibling projects, several of which are their own separate git repos the same way). Remote `origin` is `https://github.com/Gariyuuu/pocket-party.git` (gh account `Gariyuuu`). **This is a change from earlier in this project's history** — for a long stretch there were genuinely zero commits, and older entries throughout these docs (and in `SESSION_LOG.md`) that say "no git commits/remote exist" were accurate *at the time they were written*, describing that earlier era; don't take them as still true. Always run `git status`/`git log --oneline -5` yourself rather than trust a specific commit count or hash written in prose anywhere in these docs — it will drift.
 
 ---
 
 ## Current status
 
-- **Current stable state:** All ten games' engines, boards, and tests pass. `npm run typecheck`, `npm run lint`, `npm run test` (169 tests), and `rm -rf .next && npm run build` (14 routes) all pass cleanly, re-confirmed 2026-08-06.
-- **Latest completed milestone:** The PartyKit/Cloudflare → Ably realtime rework (`DECISIONS.md` D-018) — replaced the Cloudflare Worker/Durable Object entirely with Ably pub/sub, added the `live_rooms` Neon table to hold what a Durable Object's in-memory storage used to hold, added `POST /api/rooms/[code]/action` and `GET /api/rooms/[code]` as the new stateless action/read routes, replaced the HMAC room-token scheme with a direct Ably `TokenRequest` mint (`GET /api/ably-token`), worked around a real Next.js/Ably bundler incompatibility by loading Ably's client SDK from a CDN `<script>` tag instead of an npm import, and re-added `sendBeacon`-based disconnect detection plus a cron-based idle-room sweep (both acknowledged regressions from what a Durable Object gave for free, traded deliberately for $0/month hosting — see D-018 and `SECURITY.md`).
-- **Current active task:** none — both the backend migration (`TASKS.md` T-003) and the realtime rework are complete. See `TASKS.md`'s "High priority" for what's next (live verification, e2e coverage, Google/social OAuth dashboard setup).
-- **Exact point where development stopped:** the Ably rework is fully implemented and verified (typecheck/lint/test/build), and this documentation sweep is finishing up.
-- **Current blockers:** no Neon project, Clerk application, or Ably account exists yet (all account-level, the user needs to do them) — needed to *verify* what's built against something real, but nothing left to *write*.
-- **Highest-priority next task:** get real Neon/Clerk/Ably credentials and live-verify the app end to end — see `TESTING.md` and `PROJECT_STATE.md`'s "Next three recommended actions."
+- **Current stable state:** All twenty-two games' engines, boards, and tests pass. `npm run typecheck`, `npm run lint`, `npm run test` (320 tests), and `rm -rf .next && npm run build` (14 routes) all pass cleanly, re-confirmed 2026-08-07. The app is also deployed and responding correctly at https://pocket-party-eta.vercel.app, now serving all 22 games. The ambient background music was also completely rewritten this session (a single repeating 4-note loop → an 8-bar polyphonic chord progression), and a real bug was found and fixed where the solo-mode bot got permanently stuck partway through any turn spanning multiple actions (Darts, Cornhole, and now also Mancala/Dots and Boxes/Yahtzee).
+- **Latest completed milestone:** Rewrote the ambient background music, fixed a real solo-mode-bot bug, and added 5 more games — Reversi, Dots and Boxes, Yahtzee, Mancala, Trivia Blitz — bringing the total from 17 to 22. Full engines/bots/boards/tests built and wired the same way as every prior batch. 62 new unit tests (320 total, up from 258), and visually verified via real Playwright screenshots and interaction scripts — disc flips for Reversi, box completions for Dots and Boxes, a full multi-roll bot turn for Yahtzee, seed-conservation-checked sowing for Mancala, and a complete 8-round match for Trivia Blitz. `vercel deploy --prod --yes` succeeded on the first attempt, and all 5 new game pages were confirmed `200` against the live URL. Before that: added Sea Battle, Checkers, Chess, Darts, Cornhole (12→17 games) and redeployed; before that, the canvas-color/off-canvas-rendering bug sweep across Bounce Cup, Mini Hoops, Tank Tactics, Pocket Shots, and Orb Hockey (see `SESSION_LOG.md`), and before that the PartyKit/Cloudflare → Ably realtime rework (`DECISIONS.md` D-018).
+- **Current active task:** none. See `TASKS.md`'s "High priority" for what's next (a real browser click-through, `npm run test:e2e`, Google/social OAuth dashboard setup).
+- **Exact point where development stopped:** deployed and confirmed working at the API level for all 22 games; a human browser click-through and `npm run test:e2e` have not happened yet.
+- **Current blockers:** none account-level — Neon, Clerk, Ably, and a Vercel deployment all exist. What's left needs a human at a browser, not another account.
+- **Highest-priority next task:** run `TESTING.md`'s manual smoke-test checklist with two real browser windows against the live URL, and run `npm run test:e2e` — see `PROJECT_STATE.md`'s "Next three recommended actions."
 - **Features currently under construction:** none. No new product-facing games/pages are under construction.
 
 ---
@@ -47,18 +47,18 @@ All versions below are copied directly from `package.json`. Ranges (`^`) mean "w
 | Primitive component runtime | `@base-ui/react` | `^1.7.0` |
 | Animation | Framer Motion | `^12.43.0` |
 | State management (client) | Zustand | `^5.0.14` (with `persist`, localStorage-backed) |
-| Database | Neon (serverless Postgres) via `@neondatabase/serverless` + Drizzle ORM (`drizzle-orm` `^0.45.2`, `drizzle-kit` `^0.31.10`) | Schema in `src/lib/db/schema.ts` — 9 tables (incl. `live_rooms`). Migrations in `drizzle/*.sql`, **never applied to a live database.** |
-| Accounts | Clerk (`@clerk/nextjs` `^7.6.5`) | Real accounts only; guests use a hand-rolled `guest_id` cookie, not Clerk. **Not yet verified against a real Clerk application** — no keys exist yet. |
-| Realtime | Ably (`ably` `^2.26.0`) | Client SDK loaded from Ably's CDN via a `<script>` tag (npm import is broken by a Next.js/webpack RSC parsing incompatibility, see `DECISIONS.md` D-018), server-side REST client from the npm package. `src/lib/realtime/` owns room/match orchestration for all 10 games' online play; the room's Neon-persisted state (`live_rooms`) plus `POST /api/rooms/[code]/action` replace what a Durable Object used to own. **Not yet verified against a real Ably app** — no API key exists yet. |
+| Database | Neon (serverless Postgres) via `@neondatabase/serverless` + Drizzle ORM (`drizzle-orm` `^0.45.2`, `drizzle-kit` `^0.31.10`) | Schema in `src/lib/db/schema.ts` — 9 tables (incl. `live_rooms`). Migrations applied to a real Neon database (provisioned via Vercel's Marketplace integration) as of this session. |
+| Accounts | Clerk (`@clerk/nextjs` `^7.6.5`) | Real accounts only; guests use a hand-rolled `guest_id` cookie, not Clerk. Verified against a real Clerk application — guest identity provisioning confirmed working via `curl` against the live deployment. |
+| Realtime | Ably (`ably` `^2.26.0`) | Client SDK loaded from Ably's CDN via a `<script>` tag (npm import is broken by a Next.js/webpack RSC parsing incompatibility, see `DECISIONS.md` D-018), server-side REST client from the npm package. `src/lib/realtime/` owns room/match orchestration for all 22 games' online play; the room's Neon-persisted state (`live_rooms`) plus `POST /api/rooms/[code]/action` replace what a Durable Object used to own. Verified against a real Ably app — a real `TokenRequest` with correct per-room capability scoping was minted and returned. **Not yet verified:** two independent clients actually exchanging live events over Ably. |
 | Validation | Zod | `^4.4.3` |
 | Audio | Howler.js | `^2.2.4` — all sounds are procedurally synthesized at runtime, no audio files ship (`src/lib/audio/tone.ts`) |
 | Icons | lucide-react | `^1.28.0` |
 | Theming (light/dark) | next-themes | `^0.4.6` |
 | Toasts | sonner | `^2.0.7` |
 | Testing (unit) | Vitest | `^4.1.10`, environment `jsdom` |
-| Testing (e2e) | Playwright | `^@playwright/test ^1.62.1` — written but never run; specs drive a room-creation/joining flow that needs live credentials to execute |
+| Testing (e2e) | Playwright | `^@playwright/test ^1.62.1` — written but never run; a real dev server can now boot against live credentials, so this is unblocked, just not yet done |
 | Linting | ESLint | `^9`, config `eslint-config-next ^15.5.22` via `FlatCompat` (`eslint.config.mjs`) |
-| Hosting (intended) | Vercel (the whole app — a single deploy, no separate Worker anymore) | Never been linked/deployed — see `DEPLOYMENT.md` |
+| Hosting | Vercel (the whole app — a single deploy, no separate Worker anymore) | **Deployed** — live at https://pocket-party-eta.vercel.app (project `pocket-party`, pushed via `vercel deploy --prod`, no Git integration yet) — see `DEPLOYMENT.md` |
 
 ---
 
@@ -122,7 +122,7 @@ pocket-party/
 │   └── generate-theme-backgrounds.js   # Hand-rolled PNG encoder for theme backgrounds (Node CJS, excluded from ESLint)
 ├── public/
 │   └── themes/         # 6 generated theme background PNGs (committed as binary assets)
-├── vercel.json         # Vercel Cron config — hourly idle-room cleanup
+├── vercel.json         # Vercel Cron config — daily idle-room cleanup
 └── (this file, PROJECT_STATE.md, etc. — the memory system)
 ```
 
@@ -137,13 +137,13 @@ pocket-party/
 
 - **Purpose:** shared, reusable React components not tied to one specific game.
 - Subfolders: `ui/` (shadcn-generated primitives + hand-written ones like `player-badge.tsx`, `game-card.tsx`, `state-panel.tsx`), `landing/`, `room/`, `lobby/`, `profile/`, `game-shell/` (the two "shells" every game's board renders inside), `scoreboard/`.
-- **Key entry points:** `game-shell/game-surface.tsx` is the single dispatch point that maps a `gameId` to the right board component — **this is the file to edit when adding an 11th game.**
+- **Key entry points:** `game-shell/game-surface.tsx` is the single dispatch point that maps a `gameId` to the right board component — **this is the file to edit when adding a 13th game.**
 - **Note:** `room/room-page-client.tsx` renders a `next/script` tag loading Ably's client SDK from its CDN — this is a required, deliberate part of the realtime rework, not leftover debug code (see `DECISIONS.md` D-018).
 
 ### `src/games/`
 
-- **Purpose:** one folder per game (`grid-three/`, `fourfall/`, `word-clash/`, `bounce-cup/`, `mini-hoops/`, `tank-tactics/`, `orb-hockey/`, `pocket-shots/`, `quick-draw/`, `tile-rush/`), plus `core/` for the shared contract every game implements. **Entirely unaffected by either backend migration** — every engine/board/bot is pure and framework-agnostic.
-- **Pattern inside each game folder:** `types.ts`, `engine.ts` (implements `GameEngine<State, Action>`), `bot.ts` (6 of 10 games), `board.tsx`, supporting pure-logic files (`physics.ts`, `lines.ts`, `scoring.ts`, etc.).
+- **Purpose:** one folder per game (`grid-three/`, `fourfall/`, `word-clash/`, `bounce-cup/`, `mini-hoops/`, `tank-tactics/`, `orb-hockey/`, `pocket-shots/`, `quick-draw/`, `tile-rush/`, `mini-golf/`, `word-bites/`, `sea-battle/`, `checkers/`, `chess/`, `darts/`, `cornhole/`, `reversi/`, `dots-and-boxes/`, `yahtzee/`, `mancala/`, `trivia-blitz/`), plus `core/` for the shared contract every game implements. **Entirely unaffected by either backend migration** — every engine/board/bot is pure and framework-agnostic.
+- **Pattern inside each game folder:** `types.ts`, `engine.ts` (implements `GameEngine<State, Action>`), `bot.ts` (20 of 22 games), `board.tsx`, supporting pure-logic files (`physics.ts`, `lines.ts`, `scoring.ts`, etc.).
 - **`games/core/`:** `game-engine.ts` (the interface), `registry.ts` (game metadata), `engines.ts` (`GameId → engine instance` map), `action.ts` (the action envelope schema), `rng.ts` (seeded PRNG), `physics.ts` (shared projectile simulator), `game-content.ts` (rules/tutorial text).
 - **Risk:** the `GameEngine` interface is generic, so `games/core/engines.ts` and `game-shell/game-surface.tsx` both use `any` internally (with `eslint-disable` comments) — intentional, not sloppy, but TypeScript will **not** catch a mismatched state/action type at the dispatch boundary.
 
@@ -161,7 +161,7 @@ pocket-party/
 
 ### `tests/`
 
-- `unit/` — 20 files, 169 tests, all passing. Pure logic only: every game engine's win/draw/scoring logic, the shared physics simulator, RNG determinism, nickname validation, and `realtime-room-state.test.ts` (16 tests covering the room/match reducer).
+- `unit/` — 41 files, 320 tests, all passing. Pure logic only: every game engine's win/draw/scoring logic, the shared physics simulator, RNG determinism, nickname validation, the music synth's generated-audio checks, and `realtime-room-state.test.ts` (16 tests covering the room/match reducer).
 - `e2e/` — several Playwright specs (`room-join.spec.ts`, `grid-three.spec.ts`, `fourfall.spec.ts`, `bounce-cup.spec.ts`, `word-clash.spec.ts`, `tank-tactics.spec.ts`, `orb-hockey.spec.ts`, etc.). **Never executed successfully** — all need real Neon/Clerk/Ably credentials behind a running dev server first.
 
 ---
@@ -223,7 +223,7 @@ Full detail in `UI_SYSTEM.md`. Key facts:
 | `ABLY_API_KEY` | **Required** | `src/lib/realtime/ably-server.ts` (mints tokens, publishes state) | Server only — never reaches the browser, which only ever sees short-lived minted tokens | **Yes — the single most sensitive value in this stack** |
 | `CRON_SECRET` | Optional | `src/app/api/cron/cleanup/route.ts` | Server only | Yes, in the sense that omitting it leaves the cleanup route publicly callable (low severity) |
 
-There is no `.env.local` in the repo (correctly gitignored). `.env.example` exists with empty placeholder values (**Verified**, contains no real secrets). To run this app **at all**, someone must supply their own Neon/Clerk/Ably credentials — none are shared/team resources referenced anywhere in the repo.
+`.env.local` now exists locally with real values for all four (created this session; correctly gitignored, confirmed via `git check-ignore`, never appears in any doc or commit). `.env.example` still exists with empty placeholder values for anyone setting up a fresh clone. The same four vars (plus Neon's auto-provisioned extras) are also set in the Vercel project's own environment variables, across Production/Preview/Development — see `DEPLOYMENT.md`.
 
 ---
 
@@ -255,13 +255,13 @@ Full detail, including request/response shapes and the Ably channel event types,
 
 ## Testing and verification
 
-Full detail in `TESTING.md`. Short version: `npm run typecheck && npm run lint && npm run test && npm run build` is the full automated verification suite, and it currently passes cleanly (**Verified**, 2026-08-06). `npm run test:e2e` exists but has never been run successfully — it needs real Neon/Clerk/Ably credentials behind a running dev server first.
+Full detail in `TESTING.md`. Short version: `npm run typecheck && npm run lint && npm run test && npm run build` is the full automated verification suite, and it currently passes cleanly (**Verified**, 2026-08-06). Real Neon/Clerk/Ably credentials now exist and the dev server boots against them — `npm run test:e2e` is unblocked but has not actually been run yet.
 
 ---
 
 ## Deployment
 
-Full detail in `DEPLOYMENT.md`. Short version: **not deployed anywhere.** A single Vercel deploy is needed for the whole app (no separate Worker deploy anymore, see `DECISIONS.md` D-018) — and it has never happened. No domain exists, no production URL exists. `git init`/commit/push has also never happened for this project (see `PROJECT_STATE.md`).
+Full detail in `DEPLOYMENT.md`. Short version: **deployed and live** at https://pocket-party-eta.vercel.app (Vercel project `pocket-party`, single deploy for the whole app, no separate Worker — see `DECISIONS.md` D-018). Pushed directly via `vercel deploy --prod` from the local working directory — `git init`/commit/push has still never happened for this project (see `PROJECT_STATE.md`), so there's no Git-integration auto-deploy yet.
 
 ---
 
@@ -272,7 +272,7 @@ Full detail in `DEPLOYMENT.md`. Short version: **not deployed anywhere.** A sing
 - **`src/lib/identity/get-current-actor.ts`'s claim logic** — the check that a guest profile's `clerkUserId` is still `null` before attaching a new Clerk user to it is a security-relevant guard, not incidental: removing it would let one Clerk account's sign-up silently reassign a *different* account's already-linked profile (and its stats/history) if the two ever shared a browser. Do not simplify this away.
 - **`ABLY_API_KEY`** — server-only, never exposed to the client. Anyone with this key can mint a token claiming to be any profile in any room. Rotating it invalidates every currently-open Ably connection until reconnected with a freshly minted token.
 - **The CDN `<script>` tag loading Ably's client SDK (`room-page-client.tsx`)** — do not "clean this up" into a normal npm import. It exists to work around a real Next.js/webpack parse failure in Ably's bundled output (an arrow function using `super(...args)` inside a constructor, which Next.js's RSC client-boundary analyzer cannot parse). See `DECISIONS.md` D-018 for the full investigation before touching this.
-- **`games/core/game-engine.ts` (the interface) and any existing `engine.ts`'s `applyAction` signature** — changing the shape of `ActionValidationResult` or the engine contract requires updating all 10 games' engines plus `room-state.ts` plus `game-shell/solo-game-shell.tsx`. This is a wide-blast-radius change.
+- **`games/core/game-engine.ts` (the interface) and any existing `engine.ts`'s `applyAction` signature** — changing the shape of `ActionValidationResult` or the engine contract requires updating all 22 games' engines plus `room-state.ts` plus `game-shell/solo-game-shell.tsx`. This is a wide-blast-radius change.
 - **Game engine purity** — never add `Date.now()`, `Math.random()`, or a network/database call inside any `engine.ts`'s `createInitialState`/`applyAction`/`checkOutcome`. Wall-clock time must be threaded in as an explicit `now` parameter, exactly as the existing time-sensitive games already do.
 - **The `--party-*` CSS custom property names** in `globals.css` — dozens of components across every game board reference `var(--color-party-violet)` etc. by name.
 - **`.gitignore`'s `.env*` / `!.env.example` pairing** — do not weaken this; it is the only thing preventing a real secret from being committed by accident.
@@ -283,12 +283,13 @@ Full detail in `DEPLOYMENT.md`. Short version: **not deployed anywhere.** A sing
 
 See `PROJECT_STATE.md` for the live list with severity/status. The highest-signal ones:
 
-1. **Never live-tested against any backend.** Nothing has been exercised against real Neon/Clerk/Ably credentials or a real deployment.
-2. **All Playwright e2e specs, though covering every game, have never actually run** — still blocked on real credentials.
+1. **No real browser click-through or two-person live match has happened yet.** Live infrastructure (Neon/Clerk/Ably) and a real Vercel deployment both exist and are confirmed working at the API level via `curl`, but nobody has clicked through the UI or confirmed two independent Ably clients actually exchange live events — see `PROJECT_STATE.md`.
+2. **All Playwright e2e specs, though covering every game, have never actually run** — no longer blocked on missing credentials, just not yet done.
 3. **In-memory rate limiter (`lib/multiplayer/rate-limit.ts`, reused inside `POST /api/rooms/[code]/action`) is now per-serverless-function-instance, not per-room the way it was when it lived inside a long-lived Cloudflare Durable Object.** An honest regression from the Ably rework, acceptable at current scale — see `SECURITY.md`.
 4. **Presence/disconnect detection is now a best-effort `sendBeacon`/`pagehide` heuristic**, not a guaranteed `onClose` the way a Durable Object's WebSocket gave for free — another acknowledged tradeoff from the Ably rework.
 5. **If Ably's CDN is unreachable** (firewall, ad blocker, outage), room pages stay stuck on "connecting" past a 15-second wait rather than failing fast with a clear error — worth a UX pass once this is live-tested.
 6. **A social sign-in provider (e.g. Google) requires manual configuration in the Clerk dashboard**, not yet done.
+7. **A pre-existing hydration-mismatch console warning** fires on every game page's header (the "Toggle fullscreen"/"Rules" button rendering differently between SSR and client render) — confirmed present on old games too (e.g. Grid Three), so it's not something the newer games introduced. React self-heals it via a client-side re-render; worth a future pass but not blocking.
 
 ---
 

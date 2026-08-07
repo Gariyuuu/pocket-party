@@ -1,6 +1,6 @@
 # DEPLOYMENT.md
 
-**Current state: not deployed anywhere.** No Vercel project is linked, no domain exists, no production URL exists, and there are no git commits (see `PROJECT_STATE.md`). Everything below describes the *intended* process.
+**Current state: deployed and live.** Production URL: **https://pocket-party-eta.vercel.app** (Vercel project `pocket-party`, under `garywangsmes-8349s-projects`). No custom domain — the default `*.vercel.app` alias is what's in use. A git repo and a GitHub remote (`origin` → `github.com/Gariyuuu/pocket-party.git`) now exist (see `PROJECT_STATE.md`), but the Vercel project is **not yet connected** to it via Git integration — this deploy was, and every deploy so far has been, pushed directly via `vercel deploy --prod` from the local working directory; every future deploy needs `vercel deploy --prod` run manually until that connection is made. Everything below describes the actual current setup, confirmed working end-to-end via `curl` against the live URL (guest identity, room join/leave, Ably token minting — see `PROJECT_STATE.md`/`SESSION_LOG.md` for the exact commands and results).
 
 ## Hosting platform
 
@@ -15,25 +15,25 @@ A single Vercel project — the Next.js app. No separate Worker, no second deplo
 
 ## Environment variables to set
 
-Vercel Settings → Environment Variables (Production + Preview):
+**Already set**, in all three Vercel environments (Production, Preview, and Development — `vercel env ls` confirms all four below plus Neon's auto-provisioned vars appear in all three):
 
-| Variable | Required | Sensitive |
-|---|---|---|
-| `DATABASE_URL` | Yes | Yes |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | No |
-| `CLERK_SECRET_KEY` | Yes | Yes |
-| `ABLY_API_KEY` | Yes | **Yes — anyone with this key can mint a token claiming to be any profile** |
-| `CRON_SECRET` | Optional but recommended | Yes, in the sense that omitting it leaves `/api/cron/cleanup` publicly callable (low-severity — see `SECURITY.md`) |
+| Variable | Required | Sensitive | Source |
+|---|---|---|---|
+| `DATABASE_URL` (+ several other `PG*`/`POSTGRES_*` vars, unused by this app but harmless) | Yes | Yes | Auto-injected by Neon's Vercel Marketplace integration once connected to the project — not set manually |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | No | `vercel env add`, this session |
+| `CLERK_SECRET_KEY` | Yes | Yes | `vercel env add`, this session |
+| `ABLY_API_KEY` | Yes | **Yes — anyone with this key can mint a token claiming to be any profile** | `vercel env add`, this session |
+| `CRON_SECRET` | Optional but recommended | Yes | Generated (`crypto.randomBytes(24).toString("hex")`) and set this session — `/api/cron/cleanup` is no longer publicly callable without it |
 
-See `.env.example` for the full comment-annotated list.
+See `.env.example` for the full comment-annotated list. If any of these are ever rotated or removed, redeploy afterward — Vercel does not hot-reload env var changes into an already-running deployment.
 
 ## Domains
 
-None configured — no custom domain, not even a default `*.vercel.app` domain has ever been generated (no project exists yet).
+No custom domain. Production alias: **https://pocket-party-eta.vercel.app** (Vercel's own default `*.vercel.app` domain, auto-generated on first deploy). No deployment-protection/SSO wall is enabled — confirmed by an unauthenticated `curl` returning the real page, not a login redirect — so this did not need the manual "disable Deployment Protection" step some of this developer's other projects have needed (see the persistent memory system's `vercel_deployment_notes` entry); worth re-checking if it ever starts appearing, since Vercel's default has changed before.
 
 ## Preview vs. production deploy flow
 
-Standard Vercel Git-integration flow (once a repo exists and is connected): pushes to non-production branches get Preview deployments, pushes to the production branch get a Production deployment. **Not yet applicable** — there is no git remote and no Vercel project.
+**Not yet using Git integration** — a git remote exists now (`origin` → `github.com/Gariyuuu/pocket-party.git`, see `PROJECT_STATE.md`) but isn't connected to this Vercel project, so every deploy so far has been `vercel deploy --prod` run directly from the local working directory, not triggered by a push. Once the repo is connected to this Vercel project (a dashboard step, not yet done), the standard flow applies: pushes to non-production branches get Preview deployments, pushes to the production branch get a Production deployment automatically.
 
 ## Database setup steps (for a fresh environment)
 
@@ -65,7 +65,7 @@ Neon, Clerk, and Ably — see the three setup-steps sections above. No payment p
 
 ## Scheduled jobs / webhooks
 
-- **`vercel.json`** defines one cron: `GET /api/cron/cleanup` on schedule `"0 * * * *"` (hourly, on the hour) — reclaims idle rooms from `live_rooms`. Vercel picks this up automatically on deploy, no dashboard step needed. **Verify your Vercel plan actually supports hourly cron frequency before relying on it** — some tiers restrict this; if hourly isn't available, loosen the schedule (idle rooms just accumulate slightly longer in the meantime, nothing breaks).
+- **`vercel.json`** defines one cron: `GET /api/cron/cleanup` on schedule `"0 3 * * *"` (once daily, 3am UTC) — reclaims idle rooms from `live_rooms`. Vercel picks this up automatically on deploy, no dashboard step needed. **This was originally hourly** (`"0 * * * *"`) but the first real production deploy to this Vercel account's Hobby plan rejected it outright (`"Hobby accounts are limited to daily cron jobs... Upgrade to the Pro plan to unlock all Cron Jobs features"`) — not a warning, a hard deploy failure. Loosened to daily; idle rooms now accumulate for up to ~28 hours instead of ~5 before being swept, which is harmless (the same non-authoritative cleanup semantics apply, just less frequently) — see `SECURITY.md`/`DATABASE.md` for why a stale `live_rooms` row isn't a correctness issue. Upgrading to Pro would restore hourly if ever needed.
 - No webhooks are received or sent by this app.
 
 ## Known build failures / runtime limitations
@@ -76,18 +76,17 @@ Neon, Clerk, and Ably — see the three setup-steps sections above. No payment p
 
 ## Rollback procedure
 
-Not established — there are no git commits and no prior deployments to roll back to or from. Once real deployments exist: standard Vercel rollback (redeploy a previous successful deployment from the dashboard).
+One production deployment exists so far (`dpl_EaT5DLcxxyj6cT6ycBv78C2hChGR`), so there's nothing to roll back *to* yet. Once a second production deploy happens: standard Vercel rollback via `vercel rollback` or promoting a previous deployment from the dashboard/`vercel promote`.
 
-## Deployment checklist (first-ever deploy)
+## Deployment checklist (first-ever deploy — completed this session)
 
-1. `git init`/commit this project (currently has zero commits — see `PROJECT_STATE.md`; this is a decision the user needs to make, not something to do automatically).
-2. Push to a GitHub repo — deploy the `pocket-party/` subfolder as its own project if working out of this multi-project `~/Projects` folder, not the parent.
-3. Complete the database/Clerk/Ably setup steps above.
-4. Import into Vercel, confirm Next.js framework auto-detection, add all env vars (Production + Preview).
-5. Disable Vercel's default deployment-protection/SSO wall for new projects (Settings → Deployment Protection) so players without a Vercel account can open the site — a general gotcha across this developer's other projects, per the persistent memory system's `vercel_deployment_notes` entry.
-6. Deploy.
-7. Run through the manual smoke-test checklist in `TESTING.md` against the live deployment.
+1. ~~`git init`/commit this project~~ — **not done at the time of this deploy**, and turned out not to be a hard requirement for a first deploy: `vercel deploy --prod` uploads the local working directory directly, no git repo needed. A git repo, commits, and a GitHub remote now exist (see `PROJECT_STATE.md`) — added later, still not connected to this Vercel project via Git integration.
+2. Provisioned Neon via Vercel's Marketplace integration (`vercel install neon`), which also required creating and linking the Vercel project itself (`vercel link`) — see `PROJECT_STATE.md`/`SESSION_LOG.md` for the exact commands.
+3. Added `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`/`CLERK_SECRET_KEY`/`ABLY_API_KEY`/`CRON_SECRET` via `vercel env add` to all three environments.
+4. Ran `vercel deploy --prod` — **first attempt failed**: the Hobby plan rejected the hourly cron schedule outright (see "Scheduled jobs" above). Loosened `vercel.json` to a daily schedule, redeployed — succeeded.
+5. Confirmed no deployment-protection/SSO wall is blocking public access (a `curl` to the production URL returned the real page, not a login redirect) — so no manual dashboard step was needed here, unlike some of this developer's other projects.
+6. Ran an API-level smoke test directly against the live URL via `curl` (guest identity, room join/leave, Ably token minting) — all passed. **Not yet done: a real browser click-through** (`TESTING.md`'s manual smoke-test checklist) — see `PROJECT_STATE.md` for what's still open.
 
 ## Post-deployment verification
 
-Same as the manual smoke-test checklist in `TESTING.md` — there is no separate deployment-specific verification beyond confirming the app is reachable at its Vercel URL and the same checklist passes there as it should locally.
+`TESTING.md`'s manual smoke-test checklist is the real verification and has **not** been run yet against the live URL — only an API-level `curl` smoke test has (see `PROJECT_STATE.md`/`SESSION_LOG.md`). Run the full checklist with two real browser windows against **https://pocket-party-eta.vercel.app** as the next step.

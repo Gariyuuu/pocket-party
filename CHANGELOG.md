@@ -25,6 +25,8 @@ No `CHANGELOG.md` existed prior to this entry. The version history below (0.1.0 
 
 *(Note: this audit's own follow-up work — the app icon, `/patch-notes` page itself, and the theme wheel — was completed after this 0.7.0 entry was written in-app, but no corresponding patch-notes entry for that work exists in `patch-notes.ts` as of this audit. This is a gap in the in-app changelog, not in this file — flagged here rather than silently invented.)*
 
+*(Later gap, found during a 2026-08-07 documentation checkpoint pass: a substantial amount of work has landed since 0.7.0 — 12 new games (Mini Golf, Word Bites, Sea Battle, Checkers, Chess, Darts, Cornhole, Reversi, Dots and Boxes, Yahtzee, Mancala, Trivia Blitz, bringing the total to 22), a canvas-color rendering bugfix across 5 physics games, a from-scratch ambient-music rewrite, a cron-schedule fix, and the app's first live Vercel deployment — none of which has a corresponding entry in `patch-notes.ts` (still tops out at 0.7.0) or here. Per this file's own stated policy, `patch-notes.ts` is canonical and this file should be updated to match it, not the reverse — so the correct fix is new `patch-notes.ts` entries (with real version numbers chosen deliberately, not invented here) followed by matching `CHANGELOG.md` entries, not a change to this file alone. Left undone in this pass since it's product-content authoring, not a documentation-accuracy fix — see `PROJECT_STATE.md`/`TASKS.md` for this as a tracked follow-up.)*
+
 ## 0.6.0 — "Accounts and progression" — 2026-08-05
 
 - Link an email or Google account to a guest session without losing any stats — same profile, same history.
