@@ -4,7 +4,7 @@ import { ProfileHeader, type ProfileData } from "@/components/profile/profile-he
 import { MatchHistoryList, type MatchHistoryEntry } from "@/components/profile/match-history-list";
 import { AchievementsGrid, type AchievementDisplay } from "@/components/profile/achievements-grid";
 import { RecentOpponentsList, type RecentOpponent } from "@/components/profile/recent-opponents-list";
-import { getDb } from "@/lib/db/client";
+import { getDb, safeQuery } from "@/lib/db/client";
 import { achievements, matchPlayers, matches, profileAchievements, profiles, recentPlayers } from "@/lib/db/schema";
 import { getCurrentActor } from "@/lib/identity/get-current-actor";
 
@@ -18,52 +18,68 @@ export default async function ProfilePage() {
   const actor = await getCurrentActor();
   const db = getDb();
 
-  const [myProfile] = await db.select().from(profiles).where(eq(profiles.id, actor.profileId));
+  const [myProfile] = await safeQuery(() => db.select().from(profiles).where(eq(profiles.id, actor.profileId)), []);
 
   const [myMatches, achievementRows, catalog, recent] = await Promise.all([
-    db
-      .select({
-        matchId: matches.id,
-        gameId: matches.gameId,
-        endedAt: matches.endedAt,
-        result: matchPlayers.result,
-        score: matchPlayers.score,
-      })
-      .from(matches)
-      .innerJoin(matchPlayers, eq(matchPlayers.matchId, matches.id))
-      .where(and(eq(matchPlayers.profileId, actor.profileId), eq(matches.status, "completed")))
-      .orderBy(desc(matches.endedAt))
-      .limit(20),
-    db
-      .select({ achievementId: profileAchievements.achievementId })
-      .from(profileAchievements)
-      .where(eq(profileAchievements.profileId, actor.profileId)),
-    db.select().from(achievements),
-    db
-      .select({
-        opponentId: recentPlayers.opponentId,
-        timesPlayed: recentPlayers.timesPlayed,
-        displayName: profiles.displayName,
-        avatarColor: profiles.avatarColor,
-      })
-      .from(recentPlayers)
-      .innerJoin(profiles, eq(profiles.id, recentPlayers.opponentId))
-      .where(eq(recentPlayers.profileId, actor.profileId))
-      .orderBy(desc(recentPlayers.lastPlayedAt))
-      .limit(10),
+    safeQuery(
+      () =>
+        db
+          .select({
+            matchId: matches.id,
+            gameId: matches.gameId,
+            endedAt: matches.endedAt,
+            result: matchPlayers.result,
+            score: matchPlayers.score,
+          })
+          .from(matches)
+          .innerJoin(matchPlayers, eq(matchPlayers.matchId, matches.id))
+          .where(and(eq(matchPlayers.profileId, actor.profileId), eq(matches.status, "completed")))
+          .orderBy(desc(matches.endedAt))
+          .limit(20),
+      [],
+    ),
+    safeQuery(
+      () =>
+        db
+          .select({ achievementId: profileAchievements.achievementId })
+          .from(profileAchievements)
+          .where(eq(profileAchievements.profileId, actor.profileId)),
+      [],
+    ),
+    safeQuery(() => db.select().from(achievements), []),
+    safeQuery(
+      () =>
+        db
+          .select({
+            opponentId: recentPlayers.opponentId,
+            timesPlayed: recentPlayers.timesPlayed,
+            displayName: profiles.displayName,
+            avatarColor: profiles.avatarColor,
+          })
+          .from(recentPlayers)
+          .innerJoin(profiles, eq(profiles.id, recentPlayers.opponentId))
+          .where(eq(recentPlayers.profileId, actor.profileId))
+          .orderBy(desc(recentPlayers.lastPlayedAt))
+          .limit(10),
+      [],
+    ),
   ]);
 
   const matchIds = myMatches.map((m) => m.matchId);
   const roster = matchIds.length
-    ? await db
-        .select({
-          matchId: matchPlayers.matchId,
-          profileId: matchPlayers.profileId,
-          displayName: profiles.displayName,
-        })
-        .from(matchPlayers)
-        .innerJoin(profiles, eq(profiles.id, matchPlayers.profileId))
-        .where(inArray(matchPlayers.matchId, matchIds))
+    ? await safeQuery(
+        () =>
+          db
+            .select({
+              matchId: matchPlayers.matchId,
+              profileId: matchPlayers.profileId,
+              displayName: profiles.displayName,
+            })
+            .from(matchPlayers)
+            .innerJoin(profiles, eq(profiles.id, matchPlayers.profileId))
+            .where(inArray(matchPlayers.matchId, matchIds)),
+        [],
+      )
     : [];
 
   const matchHistory: MatchHistoryEntry[] = myMatches.map((m) => ({

@@ -22,3 +22,21 @@ export function getDb() {
   }
   return cached;
 }
+
+/**
+ * Wraps a *read* query so a Neon hiccup (quota, connection drop) degrades
+ * to a safe empty value instead of throwing an uncaught error that crashes
+ * the whole page with a 500. Logs server-side so the failure is still
+ * visible. Never wrap a write (insert/update/delete) with this -- a failed
+ * mutation must still surface to the caller, and never wrap anything on
+ * the room/match action path (see room-state.ts) -- a degraded live-game
+ * read there would corrupt gameplay rather than just a display page.
+ */
+export async function safeQuery<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    console.error("[db] query failed, returning fallback:", error);
+    return fallback;
+  }
+}

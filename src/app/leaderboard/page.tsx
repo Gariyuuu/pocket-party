@@ -3,7 +3,7 @@ import { SiteNav } from "@/components/landing/site-nav";
 import { EmptyState } from "@/components/ui/state-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy } from "lucide-react";
-import { getDb } from "@/lib/db/client";
+import { getDb, safeQuery } from "@/lib/db/client";
 import { leaderboardEntries, profiles } from "@/lib/db/schema";
 import { AVAILABLE_GAMES } from "@/games/core/registry";
 
@@ -32,17 +32,21 @@ export const dynamic = "force-dynamic";
 
 export default async function LeaderboardPage() {
   const db = getDb();
-  const entries: LeaderboardRow[] = await db
-    .select({
-      profileId: leaderboardEntries.profileId,
-      gameId: leaderboardEntries.gameId,
-      wins: leaderboardEntries.wins,
-      winRate: leaderboardEntries.winRate,
-      displayName: profiles.displayName,
-    })
-    .from(leaderboardEntries)
-    .innerJoin(profiles, eq(profiles.id, leaderboardEntries.profileId))
-    .orderBy(desc(leaderboardEntries.wins));
+  const entries: LeaderboardRow[] = await safeQuery(
+    () =>
+      db
+        .select({
+          profileId: leaderboardEntries.profileId,
+          gameId: leaderboardEntries.gameId,
+          wins: leaderboardEntries.wins,
+          winRate: leaderboardEntries.winRate,
+          displayName: profiles.displayName,
+        })
+        .from(leaderboardEntries)
+        .innerJoin(profiles, eq(profiles.id, leaderboardEntries.profileId))
+        .orderBy(desc(leaderboardEntries.wins)),
+    [],
+  );
 
   const byGame = new Map<string, LeaderboardRow[]>();
   for (const entry of entries) {
