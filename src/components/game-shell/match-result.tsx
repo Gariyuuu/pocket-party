@@ -34,7 +34,7 @@ export function MatchResult({
       <div className="flex size-14 items-center justify-center rounded-full bg-gradient-party text-white">
         {outcome === "win" ? <Trophy className="size-7" /> : <Handshake className="size-7" />}
       </div>
-      <h2 className="font-display text-2xl font-bold">
+      <h2 className="font-display text-2xl font-bold" role="status" aria-live="polite">
         {outcome === "draw" ? "It's a draw!" : isMe ? "You won!" : `${winnerName ?? "Opponent"} won!`}
       </h2>
 

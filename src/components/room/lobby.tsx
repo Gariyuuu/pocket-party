@@ -130,7 +130,7 @@ export function Lobby({ code, party }: { code: string; party: UseRealtimeRoomRes
           )}
         </div>
 
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col gap-3" aria-live="polite" aria-atomic="false" aria-relevant="additions removals">
           {players.map((player, i) => (
             <li key={player.profileId} className="flex items-center justify-between">
               <PlayerBadge
@@ -187,6 +187,7 @@ export function Lobby({ code, party }: { code: string; party: UseRealtimeRoomRes
         {me && (
           <Button
             variant={me.isReady ? "secondary" : "default"}
+            aria-pressed={me.isReady}
             onClick={() => party.setReady(!me.isReady)}
           >
             {me.isReady ? "Not ready" : "I'm ready"}
@@ -196,15 +197,20 @@ export function Lobby({ code, party }: { code: string; party: UseRealtimeRoomRes
         <div className="flex items-center gap-2">
           {isHost ? (
             canStart ? (
-              <Button onClick={handleStart} disabled={starting}>
+              <Button onClick={handleStart} disabled={starting} aria-live="polite">
                 {starting ? "Starting…" : "Start game"}
               </Button>
             ) : (
               <Tooltip>
                 <TooltipTrigger render={<span tabIndex={0} />}>
-                  <Button disabled>Start game</Button>
+                  <Button disabled aria-describedby="start-game-reason">
+                    Start game
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent>{startDisabledReason}</TooltipContent>
+                <span id="start-game-reason" className="sr-only">
+                  {startDisabledReason}
+                </span>
               </Tooltip>
             )
           ) : (
