@@ -105,6 +105,13 @@ export function OnlineGameShell({ roomCode, party, myPlayerId, isHost, players }
 
   return (
     <div ref={containerRef} className="mx-auto flex max-w-lg flex-col items-center gap-4 bg-background p-4 py-8">
+      <p className="sr-only" role="status" aria-live="polite">
+        {isMatchOver
+          ? match.isDraw
+            ? `${meta.name} ended in a draw.`
+            : `${meta.name} ended. ${players.find((p) => p.profileId === match.winnerPlayerId)?.nickname ?? "Opponent"} won.`
+          : `${meta.name} round in progress.`}
+      </p>
       <div className="flex w-full items-center justify-between">
         <h1 className="font-display text-xl font-bold">{meta.name}</h1>
         <div className="flex items-center">

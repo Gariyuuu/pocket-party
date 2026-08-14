@@ -20,11 +20,14 @@ export function Scoreboard({ entries, className }: ScoreboardProps) {
   const sorted = [...entries].sort((a, b) => b.wins - a.wins);
 
   return (
-    <div className={cn("rounded-2xl border p-4", className)}>
-      <h3 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-muted-foreground">
+    <div className={cn("rounded-2xl border p-4", className)} role="region" aria-labelledby="scoreboard-heading">
+      <h3
+        id="scoreboard-heading"
+        className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-muted-foreground"
+      >
         Session scoreboard
       </h3>
-      <ul className="flex flex-col gap-2">
+      <ul className="flex flex-col gap-2" aria-live="polite" aria-atomic="false">
         {sorted.map((entry) => (
           <li key={entry.playerId} className="flex items-center justify-between gap-3">
             <PlayerBadge
@@ -34,7 +37,12 @@ export function Scoreboard({ entries, className }: ScoreboardProps) {
               isYou={entry.isYou}
               size="sm"
             />
-            <span className="font-display text-lg font-bold tabular-nums">{entry.wins}</span>
+            <span
+              className="font-display text-lg font-bold tabular-nums"
+              aria-label={`${entry.wins} win${entry.wins === 1 ? "" : "s"}`}
+            >
+              {entry.wins}
+            </span>
           </li>
         ))}
       </ul>
