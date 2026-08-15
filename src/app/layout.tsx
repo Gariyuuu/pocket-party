@@ -25,10 +25,29 @@ const baloo = Baloo_2({
   weight: ["600", "700", "800"],
 });
 
+const SITE_URL = "https://pocket-party-eta.vercel.app";
+const SITE_TITLE = "Pocket Party — Play mini-games with friends";
+const SITE_DESCRIPTION =
+  "Create a room, share a code, and play fast multiplayer mini-games with friends right in the browser. No download, no account required.";
+
 export const metadata: Metadata = {
-  title: "Pocket Party — Play mini-games with friends",
-  description:
-    "Create a room, share a code, and play fast multiplayer mini-games with friends right in the browser. No download, no account required.",
+  metadataBase: new URL(SITE_URL),
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "Pocket Party",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ["/opengraph-image"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ["/opengraph-image"],
+  },
 };
 
 export const viewport: Viewport = {
