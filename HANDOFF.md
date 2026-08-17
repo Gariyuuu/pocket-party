@@ -23,7 +23,7 @@ If you find a stale Supabase *or* PartyKit/Cloudflare reference anywhere, treat 
 
 ## Current task
 
-**Both migrations are finished, real credentials exist, and all 22 games (including the 5 newest: Reversi, Dots and Boxes, Yahtzee, Mancala, Trivia Blitz) are deployed live, along with a from-scratch ambient-music rewrite.** What's left is a **real browser click-through** (`TESTING.md`'s manual smoke-test checklist) and **`npm run test:e2e`**, both now actually runnable for the first time.
+**`TASKS.md` T-005 (not started).** Both backend migrations are finished, real credentials exist, all 22 games are deployed live, and a round of accessibility/metadata/error-handling polish (safeQuery DB fallback, ARIA live regions, OpenGraph/robots/sitemap, connection-error retry UI) landed 2026-08-11 through 2026-08-16. What's left is a **real browser click-through** (`TESTING.md`'s manual smoke-test checklist) and **`npm run test:e2e`**, both now actually runnable for the first time.
 
 ## ⚠️ Resume here
 
@@ -31,6 +31,10 @@ If you find a stale Supabase *or* PartyKit/Cloudflare reference anywhere, treat 
 2. `.env.local` already has `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `ABLY_API_KEY` populated. Run `npm run dev` and pick up from `TESTING.md`'s smoke-test checklist, or run `npm run test:e2e`.
 3. The app is **deployed and live** at https://pocket-party-eta.vercel.app (Vercel project `pocket-party`, under `garywangsmes-8349s-projects`), serving all 22 games — Neon, Clerk, and Ably env vars are all set in Vercel's own environment variables (Production/Preview/Development), not just locally. A git repo (with commits) and a GitHub remote (`origin` → `github.com/Gariyuuu/pocket-party.git`) now exist too, but aren't yet connected to the Vercel project. See `TASKS.md`'s "High priority" for what's still open (browser verification, `test:e2e`, linking the existing GitHub repo to Vercel for auto-deploy).
 4. If none of that applies (credentials are gone/rotated), the highest-value fallback work is `TASKS.md`'s "Medium priority" items (reconsidering the rate limiter's storage now that it's per-serverless-instance, rate-limiting `GET /api/ably-token`, wiring `logError()` to a real APM).
+
+## Note from the 2026-08-17 documentation onboarding pass
+
+The core memory files (this one, `CLAUDE.md`, `PROJECT_STATE.md`, `TASKS.md`) hadn't been updated since commit `1f88738` (2026-08-07), even though 4 real commits landed afterward: a DB-error fallback helper (2026-08-11), an ARIA accessibility pass and OpenGraph/robots/sitemap metadata (both 2026-08-13), and a connection-error/retry UI for the room-join flow (2026-08-15, merged 2026-08-16). All four are now reflected in `PROJECT_STATE.md`'s timestamp chain and `TASKS.md`'s "Recently completed." No product code was changed in this pass — this was a documentation-only correction. If you land real work in a session, update these files before ending it; this is exactly the kind of gap that compounds if it happens twice.
 
 ## What the previous agents were doing
 
@@ -46,7 +50,7 @@ Before the backend migration started: shipped an app icon, a `/patch-notes` page
 - **No real browser click-through or two-person live match has happened yet** — everything verified against live infrastructure so far was `curl`-level, not a human clicking through the UI, and not two independent Ably subscribers confirmed to see each other's state changes.
 - **The Playwright e2e specs have never executed** — they parse/list correctly and the dev server can now boot against real credentials, but nobody has actually run `npm run test:e2e` yet.
 - **Nothing broken about the deployment** — it's live and confirmed working via `curl` (see `PROJECT_STATE.md`). A git repo/GitHub remote now exist, but aren't connected to the Vercel project yet — every deploy so far is still a manual `vercel deploy --prod`.
-- **If Ably's CDN is unreachable** (firewall, ad blocker, outage), room pages stay stuck on "connecting" past a 15-second wait rather than failing fast — a known UX gap (see `DEPLOYMENT.md`).
+- ~~If Ably's CDN is unreachable, room pages stay stuck on "connecting" past a 15-second wait~~ — **fixed 2026-08-15** (`09c0ede`): an explicit error state + retry button now surfaces instead. Not yet confirmed via an actual simulated-outage click-through.
 
 See `PROJECT_STATE.md`'s "Blockers" for the complete list.
 
