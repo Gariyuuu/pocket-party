@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Script from "next/script";
+import { ThinkingOrb } from "thinking-orbs";
 import { Button } from "@/components/ui/button";
 import { IdentityDialog } from "@/components/room/identity-dialog";
 import { Lobby } from "@/components/room/lobby";
@@ -45,11 +46,31 @@ export function RoomPageClient({ code }: { code: string }) {
     setDialogOpen(false);
   }
 
+  if (party.status === "error") {
+    return (
+      <>
+        <Script src="https://cdn.ably.com/lib/ably.min-2.js" strategy="afterInteractive" />
+        <div className="mx-auto flex max-w-sm flex-col items-center gap-4 p-8 text-center">
+          <p className="font-display text-xl font-bold">Couldn&apos;t reach room {code}</p>
+          <p className="text-muted-foreground">
+            The realtime connection didn&apos;t come up in time — this is usually a network or ad-blocker issue.
+          </p>
+          <Button size="lg" onClick={party.retry}>
+            Try again
+          </Button>
+        </div>
+      </>
+    );
+  }
+
   if (party.status === "connecting" || (autojoin && !isMember)) {
     return (
       <>
         <Script src="https://cdn.ably.com/lib/ably.min-2.js" strategy="afterInteractive" />
-        <p className="p-8 text-center text-muted-foreground">Looking for room {code}…</p>
+        <div className="flex flex-col items-center gap-3 p-8 text-center text-muted-foreground">
+          <ThinkingOrb state="connecting" aria-label={`Connecting to room ${code}`} />
+          <p>Looking for room {code}…</p>
+        </div>
       </>
     );
   }

@@ -54,7 +54,8 @@ export interface RoomActionResult {
 }
 
 export interface UseRealtimeRoomResult {
-  status: "connecting" | "ready";
+  status: "connecting" | "ready" | "error";
+  retry: () => void;
   myPlayerId: string | null;
   room: LiveRoom | null;
   players: LiveRoomPlayer[];
@@ -112,6 +113,8 @@ export function useRealtimeRoom(code: string | null): UseRealtimeRoomResult {
   const [match, setMatch] = useState<LiveMatch | null>(null);
   const [gameState, setGameState] = useState<unknown>(null);
   const [sequence, setSequence] = useState(0);
+  const [connectError, setConnectError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const sequenceRef = useRef(0);
   const lastUpdatedAtRef = useRef(0);
   const clientRef = useRef<Ably.RealtimeClient | null>(null);
@@ -140,6 +143,7 @@ export function useRealtimeRoom(code: string | null): UseRealtimeRoomResult {
 
   useEffect(() => {
     if (!code) return;
+    setConnectError(false);
     const signal = { cancelled: false };
     let channel: Ably.RealtimeChannel | null = null;
 
@@ -208,7 +212,11 @@ export function useRealtimeRoom(code: string | null): UseRealtimeRoomResult {
         document.addEventListener("pagehide", handleUnload);
       })
       .catch(() => {
-        /* status stays "connecting" — see waitForAblyGlobal's 15s timeout */
+        // waitForAblyGlobal's 15s timeout fired (or the CDN script failed
+        // outright) — surface it instead of leaving `status` stuck on
+        // "connecting" forever with no way out. `retry()` re-runs this
+        // effect from scratch via retryCount.
+        if (!signal.cancelled) setConnectError(true);
       });
 
     return () => {
@@ -218,7 +226,12 @@ export function useRealtimeRoom(code: string | null): UseRealtimeRoomResult {
       clientRef.current?.close();
       clientRef.current = null;
     };
-  }, [code, applyStateEvent]);
+  }, [code, applyStateEvent, retryCount]);
+
+  const retry = useCallback(() => {
+    setConnectError(false);
+    setRetryCount((n) => n + 1);
+  }, []);
 
   const sendAction = useCallback(
     async (msg: RoomActionRequest): Promise<RoomActionResult> => {
@@ -240,7 +253,8 @@ export function useRealtimeRoom(code: string | null): UseRealtimeRoomResult {
   );
 
   return {
-    status: room ? "ready" : "connecting",
+    status: room ? "ready" : connectError ? "error" : "connecting",
+    retry,
     myPlayerId,
     room,
     players,
