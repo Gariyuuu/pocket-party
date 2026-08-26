@@ -9,7 +9,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-display);
+  --font-display: var(--font-baloo);
+  --font-heading: var(--font-baloo);
   --color-party-violet: var(--party-violet);
   --color-party-pink: var(--party-pink);
   --color-party-cyan: var(--party-cyan);
