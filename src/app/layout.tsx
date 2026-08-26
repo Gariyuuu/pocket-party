@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 const baloo = Baloo_2({
-  variable: "--font-display",
+  variable: "--font-baloo",
   subsets: ["latin"],
   weight: ["600", "700", "800"],
 });
